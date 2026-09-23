@@ -21,7 +21,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        'rounded-2xl border border-slate-200/90 bg-white text-card-foreground shadow-[0_1px_2px_rgba(15,23,42,0.035)]',
+        'rounded-2xl border border-border bg-card text-card-foreground shadow-1',
         className,
       )}
       {...props}
@@ -34,13 +34,45 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn('text-[15px] font-semibold leading-snug tracking-tight text-slate-900', className)} {...props} />;
+  return (
+    <h3
+      className={cn('text-[15px] font-semibold leading-snug tracking-tight text-text', className)}
+      {...props}
+    />
+  );
 }
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-sm text-muted-foreground leading-relaxed', className)} {...props} />;
+  return <p className={cn('text-sm text-text-3 leading-relaxed', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('p-5 pt-0', className)} {...props} />;
+}
+
+export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('flex items-center gap-2 p-5 pt-0', className)} {...props} />;
+}
+
+/**
+ * 可交互卡片：整块可点击时的键盘与焦点语义。
+ * 用 button 语义而非 div+onClick，保证键盘可达（组件契约第 4 条）。
+ */
+export function CardButton({
+  className,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'rounded-2xl border border-border bg-card text-left text-card-foreground shadow-1',
+        'transition-colors duration-(--duration-fast) hover:bg-hover',
+        'outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        className,
+      )}
+      {...props}
+    />
+  );
 }

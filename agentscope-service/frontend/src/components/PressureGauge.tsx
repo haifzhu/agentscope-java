@@ -15,7 +15,23 @@
  */
 
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import type { Tone } from '@/components/ui/tokens';
 
+/** 阈值：达到即升级告警色。命名常量，避免魔法数字散落。 */
+const PRESSURE_WARNING = 0.7;
+const PRESSURE_CRITICAL = 0.85;
+
+export function pressureTone(ratio: number): Tone {
+  if (ratio >= PRESSURE_CRITICAL) return 'danger';
+  if (ratio >= PRESSURE_WARNING) return 'warning';
+  return 'success';
+}
+
+/**
+ * 上下文压力计。令牌化改造：原先用 bg-red-500 / bg-amber-500 / bg-emerald-500
+ * 三档硬编码，暗色下不跟随；现改用 Progress 的语义色三件套。
+ */
 export function PressureGauge({
   value,
   className,
@@ -23,17 +39,23 @@ export function PressureGauge({
   value?: number | null;
   className?: string;
 }) {
-  if (value == null || !Number.isFinite(value)) return <span className="text-xs text-muted-foreground" title="Context pressure has not been reported">Not reported</span>;
-  const ratio = Math.max(0, Math.min(1, value ?? 0));
+  if (value == null || !Number.isFinite(value)) {
+    return (
+      <span className="text-xs text-text-3" title="Context pressure has not been reported">
+        Not reported
+      </span>
+    );
+  }
+
+  const ratio = Math.max(0, Math.min(1, value));
   const pct = Math.round(ratio * 100);
-  const tone =
-    ratio >= 0.85 ? 'bg-red-500' : ratio >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500';
+
   return (
-    <div className={cn('flex items-center gap-2', className)} title={`Context pressure ${pct}%`}>
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
-        <div className={cn('h-full rounded-full transition-all', tone)} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs tabular-nums text-muted-foreground">{pct}%</span>
+    <div className={cn('flex items-center gap-2', className)}>
+      <Progress value={ratio * 100} tone={pressureTone(ratio)} className="w-24" />
+      <span className="text-xs tabular-nums text-text-3" title={`Context pressure ${pct}%`}>
+        {pct}%
+      </span>
     </div>
   );
 }

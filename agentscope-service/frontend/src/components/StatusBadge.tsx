@@ -15,20 +15,30 @@
  */
 
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
+
+/** 状态词表 → 语义色。集中一处，便于与后端状态枚举对齐。 */
+const STATUS_TONES: Record<string, BadgeTone> = {
+  active: 'success',
+  healthy: 'success',
+  ready: 'success',
+  succeeded: 'success',
+  terminated: 'danger',
+  failed: 'danger',
+  unhealthy: 'danger',
+  error: 'danger',
+  compressing: 'warning',
+  pending: 'warning',
+  running: 'info',
+};
+
+export function statusTone(status?: string): BadgeTone {
+  return STATUS_TONES[(status ?? '').toLowerCase()] ?? 'neutral';
+}
 
 export function StatusBadge({ status, className }: { status?: string; className?: string }) {
-  const s = (status || '').toLowerCase();
-  const tone =
-    s === 'active' || s === 'healthy' || s === 'ready'
-      ? 'success'
-      : s === 'terminated' || s === 'failed' || s === 'unhealthy'
-        ? 'danger'
-        : s === 'compressing' || s === 'pending'
-          ? 'warning'
-          : 'default';
   return (
-    <Badge tone={tone} className={cn('uppercase tracking-wide', className)}>
+    <Badge tone={statusTone(status)} className={cn('uppercase tracking-wide', className)}>
       {status || 'unknown'}
     </Badge>
   );

@@ -15,28 +15,53 @@
  */
 
 import { cn } from '@/lib/utils';
+import { toneClasses, solidToneClasses, type Tone } from './tokens';
 
-const tones: Record<string, string> = {
-  default: 'bg-slate-100 text-slate-700',
-  success: 'bg-emerald-50 text-emerald-700',
-  warning: 'bg-amber-50 text-amber-700',
-  danger: 'bg-red-50 text-red-700',
-  info: 'bg-indigo-50 text-indigo-700',
-};
+/** 兼容旧调用点的 tone 词表：default 映射到 neutral。 */
+const LEGACY_TONE_ALIAS = { default: 'neutral' } as const;
+
+export type BadgeTone = Tone | keyof typeof LEGACY_TONE_ALIAS;
+
+function resolveTone(tone: BadgeTone): Tone {
+  return (LEGACY_TONE_ALIAS as Record<string, Tone>)[tone] ?? (tone as Tone);
+}
 
 export function Badge({
   className,
-  tone = 'default',
+  tone = 'neutral',
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & { tone?: keyof typeof tones }) {
+}: React.HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
   return (
     <span
       className={cn(
         'inline-flex items-center rounded-full px-2.5 py-1 text-[13px] font-medium leading-none',
-        tones[tone],
+        toneClasses[resolveTone(tone)],
         className,
       )}
       {...props}
+    />
+  );
+}
+
+/**
+ * 状态点：与 Badge 同色板，用于表格/列表里的紧凑状态指示。
+ * 纯装饰时对读屏隐藏，带 label 时作为 img 暴露。
+ */
+export function StatusDot({
+  tone = 'neutral',
+  className,
+  label,
+}: {
+  tone?: BadgeTone;
+  className?: string;
+  label?: string;
+}) {
+  return (
+    <span
+      className={cn('inline-block h-2 w-2 shrink-0 rounded-full', solidToneClasses[resolveTone(tone)], className)}
+      role={label ? 'img' : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
     />
   );
 }

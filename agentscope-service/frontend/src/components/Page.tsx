@@ -22,7 +22,7 @@ export function Page({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full bg-canvas">
       <div
         className={cn(
           'mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 sm:py-9 lg:px-10',
@@ -50,9 +50,9 @@ export function PageHeader({
   return (
     <header className={cn('flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="min-w-0">
-        <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-slate-950 sm:text-[32px]">{title}</h1>
+        <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-text sm:text-[32px]">{title}</h1>
         {description && (
-          <p className="mt-1.5 max-w-3xl text-[15px] leading-6 text-slate-500">{description}</p>
+          <p className="mt-1.5 max-w-3xl text-[15px] leading-6 text-text-3">{description}</p>
         )}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}

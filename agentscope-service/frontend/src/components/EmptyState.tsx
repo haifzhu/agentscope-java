@@ -16,6 +16,13 @@
 
 import { cn } from '@/lib/utils';
 
+/**
+ * 空状态。
+ *
+ * 保留原签名以兼容既有调用点，但样式改为令牌驱动；
+ * 需要「加载中 / 错误」的调用方请改用 `ui/async-state` 的 <AsyncState>，
+ * 它把三态收敛在一处（技术方案 §3.3）。
+ */
 export function EmptyState({
   title,
   description,
@@ -30,14 +37,14 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex min-h-56 flex-col items-center justify-center rounded-2xl border border-slate-200/90 bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(15,23,42,0.035)]',
+        'flex min-h-56 flex-col items-center justify-center rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-1',
         className,
       )}
     >
-      <div className="h-10 w-10 rounded-full border border-slate-200 bg-slate-50" />
-      <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
+      <div className="h-10 w-10 rounded-full border border-border bg-surface-3" />
+      <h3 className="mt-4 text-sm font-semibold text-text">{title}</h3>
       {description && (
-        <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">{description}</p>
+        <p className="mt-1 max-w-md text-sm leading-6 text-text-3">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

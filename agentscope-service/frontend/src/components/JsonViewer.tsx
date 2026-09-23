@@ -14,10 +14,24 @@
  * limitations under the License.
  */
 
+import { cn } from '@/lib/utils';
+
+/**
+ * JSON 查看器。
+ *
+ * 代码底色刻意用 --color-canvas（最暗层）而非字面色值：
+ * 浅色主题下它是浅灰底 + 深字，暗色下自动变成深底 + 亮字，
+ * 两套都由令牌驱动，不再需要为暗色单独写一遍。
+ */
 export function JsonViewer({ value, className }: { value: unknown; className?: string }) {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
   return (
-    <pre className={`overflow-auto rounded-lg bg-slate-950 p-4 text-xs leading-relaxed text-slate-100 ${className || ''}`}>
+    <pre
+      className={cn(
+        'overflow-auto rounded-lg border border-border bg-canvas p-4 font-mono text-xs leading-relaxed text-text-2',
+        className,
+      )}
+    >
       {text}
     </pre>
   );
