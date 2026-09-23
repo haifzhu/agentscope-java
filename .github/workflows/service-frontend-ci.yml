@@ -1,0 +1,41 @@
+name: AgentScope Service frontend CI
+
+on:
+  pull_request:
+    paths:
+      - 'agentscope-service/frontend/**'
+      - '.github/workflows/service-frontend-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'agentscope-service/frontend/**'
+      - '.github/workflows/service-frontend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agentscope-service/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: agentscope-service/frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run build
+      - run: pnpm run test
