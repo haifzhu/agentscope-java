@@ -99,8 +99,11 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* dark: 走 class 策略（非 prefers-color-scheme），
-   由 index.html 的防闪烁内联脚本设置 .dark。 */
+/* dark: 走 class 策略（非 prefers-color-scheme）。
+   挂载方是主题层（A3 的 ThemeProvider），需在 React 挂载前于
+   index.html <head> 内联一段防闪烁脚本设置 .dark —— 纯 React 方案
+   必然闪烁。当前 index.html 尚未加该脚本，故生产应用默认仍是浅色；
+   showcase.html 已提前带上，用于验证令牌链路（见 Showcase.tsx）。 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================

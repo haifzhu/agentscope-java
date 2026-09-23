@@ -137,6 +137,27 @@ export function DataTable<T>({
   const selectable = Boolean(selectedKeys && onSelectedKeysChange);
   const useVirtual = rows.length > virtualizeAfter && Boolean(maxHeight);
 
+  /**
+   * 排序既支持受控（外部给 sort + onSortChange）也支持非受控（组件自持）。
+   * 早期实现只在提供了 onSortChange 时才渲染排序按钮，导致只写
+   * `sortable: true` 的列表面看似可排序、实际完全不可交互 —— 一个静默失效。
+   */
+  const [internalSort, setInternalSort] = React.useState<SortState | undefined>(undefined);
+  const isSortControlled = onSortChange !== undefined;
+  const activeSort = isSortControlled ? sort : internalSort;
+
+  const applySort = (next: SortState) => {
+    if (isSortControlled) onSortChange?.(next);
+    else setInternalSort(next);
+  };
+
+  /**
+   * 只要有 sortable 列就允许排序，与是否已经点过无关 —— 早期实现
+   * 把"是否渲染排序按钮"绑在 onSortChange 上，导致未受控用法下
+   * 表头是纯文本、完全不可交互。
+   */
+  const sortingEnabled = columns.some((c) => c.sortable);
+
   React.useEffect(() => {
     if (!useVirtual) return;
     const el = scrollRef.current;
@@ -148,7 +169,7 @@ export function DataTable<T>({
     return () => observer.disconnect();
   }, [useVirtual]);
 
-  const sorted = React.useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
+  const sorted = React.useMemo(() => sortRows(rows, columns, activeSort), [rows, columns, activeSort]);
 
   const windowRange = useVirtual
     ? virtualWindow(scrollTop, viewportHeight || rowHeight * 10, sorted.length, rowHeight)
@@ -178,10 +199,10 @@ export function DataTable<T>({
   };
 
   const handleSort = (column: ColumnDef<T>) => {
-    if (!column.sortable || !onSortChange) return;
+    if (!column.sortable || !sortingEnabled) return;
     const nextDirection: SortDirection =
-      sort?.key === column.key && sort.direction === 'asc' ? 'desc' : 'asc';
-    onSortChange({ key: column.key, direction: nextDirection });
+      activeSort?.key === column.key && activeSort.direction === 'asc' ? 'desc' : 'asc';
+    applySort({ key: column.key, direction: nextDirection });
   };
 
   const alignClass = (align?: ColumnDef<T>['align']) =>
@@ -208,17 +229,17 @@ export function DataTable<T>({
         </th>
       )}
       {columns.map((column) => {
-        const active = sort?.key === column.key;
-        const SortIcon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ChevronUp : ChevronDown;
+        const active = activeSort?.key === column.key;
+        const SortIcon = !active ? ChevronsUpDown : activeSort.direction === 'asc' ? ChevronUp : ChevronDown;
         return (
           <th
             key={column.key}
             scope="col"
             style={column.width ? { width: column.width } : undefined}
-            aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+            aria-sort={active ? (activeSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
             className={cn('px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-text-3', alignClass(column.align))}
           >
-            {column.sortable && onSortChange ? (
+            {column.sortable && sortingEnabled ? (
               <button
                 type="button"
                 onClick={() => handleSort(column)}
