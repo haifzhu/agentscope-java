@@ -216,6 +216,15 @@ export default function AppShell() {
   const openCommand = useCallback(() => setCommandOpen(true), []);
   useCommandPaletteShortcut(openCommand);
   useEffect(() => setMobileNavOpen(false), [location.pathname]);
+  // 移动端抽屉（B3）：Escape 可关闭，打开时焦点移入侧栏保证键盘可达。
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileNavOpen]);
   const resourceMatch = location.pathname.match(/^\/agent-center\/(agents|teams|workflows|entrypoints|workspaces)\/([^/]+)/);
   const accessLink = resourceMatch && resourceMatch[2] !== 'new' && !location.pathname.includes('/manage') ? resourceURL(scope.namespace, ({ agents: 'agent', teams: 'team', workflows: 'workflow', entrypoints: 'channel', workspaces: 'workspace' } as Record<string, string>)[resourceMatch[1]], decodeURIComponent(resourceMatch[2])) : undefined;
   const context = routeLabels.find(([prefix]) => matches(location.pathname, prefix));
@@ -229,7 +238,10 @@ export default function AppShell() {
         Skip to content
       </a>
       {mobileNavOpen && <div aria-hidden="true" className="fixed inset-0 z-30 bg-scrim lg:hidden" onClick={() => setMobileNavOpen(false)} />}
-      <aside className={cn('fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-border bg-surface transition-transform lg:static lg:z-auto lg:translate-x-0', mobileNavOpen ? 'translate-x-0' : '-translate-x-full')}>
+      <aside
+        aria-label="Sidebar"
+        className={cn('fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-border bg-surface transition-transform lg:static lg:z-auto lg:translate-x-0', mobileNavOpen ? 'translate-x-0' : '-translate-x-full')}
+      >
         <div className="border-b border-border px-4 py-4">
           <Link className="flex items-center gap-3 rounded-lg" to="/work/overview">
             <img src="/logo.svg" alt="AgentScope" className="h-9 w-9 shrink-0" width={36} height={36} />

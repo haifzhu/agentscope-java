@@ -25,11 +25,12 @@ import { useNavigate } from 'react-router-dom';
 import { getUsername, isAdmin } from '@/lib/auth';
 import { useAccountIdentity } from '@/lib/accountIdentity';
 import { useControlPlaneScope } from './ScopeContext';
+import { cn } from '@/lib/utils';
 
-const menuItem = 'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-950';
+const menuItem = 'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-2 outline-none data-[highlighted]:bg-hover data-[highlighted]:text-text';
 
 function Initial({ name }: { name: string }) {
-  return <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-medium text-slate-600">{Array.from(name)[0]?.toLocaleUpperCase() || '?'}</span>;
+  return <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-3 text-sm font-medium text-text-2">{Array.from(name)[0]?.toLocaleUpperCase() || '?'}</span>;
 }
 
 export function NamespaceSwitcher() {
@@ -45,17 +46,17 @@ export function NamespaceSwitcher() {
     <div className="border-b border-border px-3 py-3">
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild>
-          <button type="button" aria-label="Namespace" className="flex w-full items-center gap-3 rounded-xl bg-slate-100/80 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-slate-200/70">
+          <button type="button" aria-label="Namespace" className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface-3 px-3 py-2.5 text-left transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-hover">
             <Initial name={displayName} />
             <span className="min-w-0 flex-1">
               <span className="block text-[11px] text-muted-foreground">Namespace</span>
               <span className="block truncate text-sm font-semibold text-foreground">{displayName}</span>
             </span>
-            <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-500" />
+            <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-text-3" />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
-          <DropdownMenu.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 w-72 max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-xl outline-none max-h-[var(--radix-dropdown-menu-content-available-height)]">
+          <DropdownMenu.Content align="start" sideOffset={6} collisionPadding={12} className="z-50 w-72 max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-border bg-surface p-1.5 shadow-3 outline-none max-h-[var(--radix-dropdown-menu-content-available-height)]">
             <div className="flex items-center gap-3 px-3 py-3">
               <Initial name={username} />
               <div className="min-w-0">
@@ -70,7 +71,7 @@ export function NamespaceSwitcher() {
               if (next) setScope(next.tenant, next.name);
             }}>
               {namespaces.map(n => (
-                <DropdownMenu.RadioItem key={JSON.stringify([n.tenant, n.name])} value={JSON.stringify([n.tenant, n.name])} textValue={n.displayName || n.name} className={menuItem}>
+                <DropdownMenu.RadioItem key={JSON.stringify([n.tenant, n.name])} value={JSON.stringify([n.tenant, n.name])} textValue={n.displayName || n.name} className={cn(menuItem, 'data-[state=checked]:bg-primary-soft data-[state=checked]:font-semibold data-[state=checked]:text-primary-text')}>
                   <Initial name={n.displayName || n.name} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{n.displayName || n.name}</span>
