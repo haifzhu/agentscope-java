@@ -26,6 +26,7 @@ import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartDataFallback } from '@/components/ui/chart-container';
+import { LineChart, BarChart, DonutChart } from '@/components/ui/charts';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable, type ColumnDef } from '@/components/ui/data-table';
@@ -407,6 +408,52 @@ function ShowcaseBody() {
               ]}
             />
           </ChartContainer>
+        </Section>
+
+        <Section id="charts" title="LineChart / BarChart / DonutChart（A5 图表基元）">
+          <ChartContainer
+            title="执行吞吐"
+            description="近 14 日执行次数"
+            legend={[
+              { label: '成功', tone: 'primary' },
+              { label: '失败', tone: 'danger' },
+            ]}
+          >
+            <LineChart
+              ariaLabel="近 14 日成功与失败执行次数折线图"
+              series={[
+                { name: '成功', points: [32, 41, 38, 55, 49, 62, 58, 71, 66, 78, 74, 82, 79, 88] },
+                { name: '失败', points: [4, 6, 3, 8, 5, 7, 4, 9, 6, 5, 8, 4, 6, 5] },
+              ]}
+            />
+          </ChartContainer>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartContainer title="Token 消耗" description="按智能体">
+              <BarChart
+                ariaLabel="各智能体 Token 消耗柱状图"
+                data={[
+                  { label: '代码评审助手', value: 41200 },
+                  { label: '工单分派', value: 28400 },
+                  { label: '文档摘要', value: 19800 },
+                  { label: '数据查询', value: 12300 },
+                ]}
+                formatValue={(v) => `${(v / 1000).toFixed(1)}k`}
+              />
+            </ChartContainer>
+            <ChartContainer title="执行结果分布" description="近 7 日">
+              <div className="flex items-center justify-center py-2">
+                <DonutChart
+                  ariaLabel="近 7 日执行结果分布环形图"
+                  centerLabel="执行总数"
+                  segments={[
+                    { label: '成功', value: 812, tone: 'success' },
+                    { label: '运行中', value: 64, tone: 'info' },
+                    { label: '失败', value: 21, tone: 'danger' },
+                  ]}
+                />
+              </div>
+            </ChartContainer>
+          </div>
         </Section>
 
         <Section id="nav" title="Tabs / Breadcrumbs / SideNav / DrillDown">
