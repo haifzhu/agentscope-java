@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>组件库 Showcase — AgentScope Service</title>
+    <!-- 防闪烁：与 index.html 同一段逻辑，保持两份一致 -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('agentscope.theme');
+          var mode = stored === 'light' || stored === 'dark' ? stored : null;
+          var dark =
+            mode === 'dark' ||
+            (mode === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) {
+          /* localStorage 不可用时退回系统偏好 */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/showcase/main.tsx"></script>
+  </body>
+</html>

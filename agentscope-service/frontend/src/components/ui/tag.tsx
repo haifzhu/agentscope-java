@@ -43,7 +43,7 @@ export function Tag({ className, tone = 'neutral', onRemove, removeLabel = 'Remo
           type="button"
           onClick={onRemove}
           aria-label={removeLabel}
-          className="rounded-sm p-0.5 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/15"
+          className="rounded-sm p-0.5 hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
             <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
