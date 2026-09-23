@@ -48,6 +48,11 @@ export const toneClasses = {
 export type Tone = keyof typeof toneClasses;
 
 /** 实心语义色：用于进度条、状态点、图表填充。 */
+/**
+ * 实心语义填充。fill-only 契约：这些底色上如需文字，前景一律用
+ * 白色（*-foreground / text-white）；语义文字请改用 *-soft 底 + *-text 字。
+ * 双主题实心值均满足白字 ≥4.5:1（见 index.css 暗色块注释）。
+ */
 export const solidToneClasses = {
   neutral: 'bg-text-4',
   primary: 'bg-primary',

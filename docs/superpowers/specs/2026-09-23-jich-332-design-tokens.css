@@ -198,16 +198,16 @@
     --color-primary-text: #a5b4fc;
     --color-primary-foreground: #ffffff;
 
-    --color-success: #10b981;
+    --color-success: #047857;
     --color-success-soft: rgb(16 185 129 / 0.14);
     --color-success-text: #6ee7b7;
-    --color-warning: #f59e0b;
+    --color-warning: #b45309;
     --color-warning-soft: rgb(245 158 11 / 0.14);
     --color-warning-text: #fcd34d;
-    --color-danger: #ef4444;
+    --color-danger: #dc2626;
     --color-danger-soft: rgb(239 68 68 / 0.14);
     --color-danger-text: #fca5a5;
-    --color-info: #38bdf8;
+    --color-info: #0369a1;
     --color-info-soft: rgb(56 189 248 / 0.14);
     --color-info-text: #7dd3fc;
 
