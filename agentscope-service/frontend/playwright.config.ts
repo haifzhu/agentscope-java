@@ -19,6 +19,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.e2e.ts",
+  // 视觉回归走独立配置（playwright.visual.config.ts），功能 CI 不跑截图对比
+  testIgnore: "**/visual-baseline.e2e.ts",
   fullyParallel: true,
   timeout: 30000,
   use: { baseURL: "http://127.0.0.1:5177", viewport: { width: 1440, height: 1000 }, screenshot: "only-on-failure", trace: "retain-on-failure" },
