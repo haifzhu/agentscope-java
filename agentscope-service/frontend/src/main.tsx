@@ -288,13 +288,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/managed/registered-agents" element={<RedirectWithSearch to="/agent-center/agents" />} />
             <Route path="/managed/registered-agents/:name" element={<RedirectWithSearch to="/agent-center/agents" />} />
             <Route path="/managed/agent-instances" element={<RedirectWithSearch to="/agent-center/agents" />} />
-            <Route path="/managed/agents" element={<AgentsHubPage />} />
-            <Route path="/managed/agents/new" element={<AgentCreatePage />} />
+            <Route path="/managed/agents" element={<RedirectWithSearch to="/agent-center/agents" />} />
+            <Route path="/managed/agents/new" element={<RedirectWithSearch to="/agent-center/agents/new" />} />
             <Route path="/managed/sessions" element={<SessionsHubPage />} />
             <Route path="/managed/sessions/new" element={<SessionCreatePage />} />
             <Route path="/managed/sessions/:sessionId" element={<SessionDetailPage />} />
-            <Route path="/managed/workspaces" element={<WorkspacesHubPage />} />
-            <Route path="/managed/workspaces/:id" element={<WorkspaceDetailPage />} />
+            <Route path="/managed/workspaces" element={<RedirectWithSearch to="/agent-center/workspaces" />} />
+            <Route path="/managed/workspaces/:id" element={<RedirectWithSearch to="/agent-center/workspaces" param="id" />} />
             <Route path="/settings/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<ManagementLayout />}>
               <Route index element={<Navigate to="/settings/namespaces" replace />} />
@@ -308,12 +308,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/managed/profile" element={<RedirectWithSearch to="/settings/profile" />} />
             <Route path="/managed/admin/users" element={<RedirectWithSearch to="/settings/users" />} />
             <Route path="/work/permissions" element={<PermissionsPage />} />
-            <Route path="/managed/environments" element={<EnvironmentsHubPage />} />
-            <Route path="/managed/memory" element={<MemoryStoresPage />} />
-            <Route path="/managed/vaults" element={<VaultsPage />} />
+            <Route path="/managed/environments" element={<RedirectWithSearch to="/agent-center/environments" />} />
+            <Route path="/managed/memory" element={<RedirectWithSearch to="/agent-center/memory" />} />
+            <Route path="/managed/vaults" element={<RedirectWithSearch to="/agent-center/vaults" />} />
             <Route path="/managed/entrypoints" element={<LegacyEndpointCatalogRedirect />} />
-            <Route path="/managed/channels" element={<ChannelsHubPage />} />
-            <Route path="/managed/channels/:channelId" element={<ChannelDetailPage />} />
+            <Route path="/managed/channels" element={<RedirectWithSearch to="/agent-center/entrypoints" />} />
+            <Route path="/managed/channels/:channelId" element={<RedirectWithSearch to="/agent-center/entrypoints" param="channelId" />} />
 
             <Route path="/managed/agents/:id" element={<AgentLayout />}>
               <Route index element={<Navigate to="settings" replace />} />
