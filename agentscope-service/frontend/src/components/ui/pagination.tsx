@@ -118,7 +118,7 @@ export function Pagination({
           </label>
         )}
 
-        {navButton(current - 1, current <= 1, ChevronLeft, 'Previous page')}
+        {navButton(current - 1, current <= 1, ChevronLeft, '上一页')}
 
         {range.map((item, i) =>
           item === 'gap' ? (
@@ -145,7 +145,7 @@ export function Pagination({
           ),
         )}
 
-        {navButton(current + 1, current >= pageCount, ChevronRight, 'Next page')}
+        {navButton(current + 1, current >= pageCount, ChevronRight, '下一页')}
       </div>
     </nav>
   );

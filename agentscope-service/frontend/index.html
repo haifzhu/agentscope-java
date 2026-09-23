@@ -1,9 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgentScope Service</title>
+    <title>AgentScope 管理平台</title>
+    <script>
+      // 防闪烁：首帧前按持久化偏好设置 .dark（与 ThemeProvider 的
+      // localStorage key 保持一致，见 src/app/theme/ThemeProvider.tsx）
+      (function () {
+        try {
+          if (localStorage.getItem('ags-theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) { /* 隐私模式下保持浅色默认 */ }
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

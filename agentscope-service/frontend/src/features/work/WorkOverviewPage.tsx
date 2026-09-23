@@ -86,13 +86,13 @@ export default function WorkOverviewPage() {
   const cards = [
     {
       key: "attention",
-      label: "Needs attention",
+      label: "需要我处理",
       value: inbox.isLoading ? "—" : attentionCount,
       onClick: () => navigate(scope.scopedPath(METRIC_LINKS.attention)),
     },
     {
       key: "open-issues",
-      label: "Open issues",
+      label: "待办事项",
       value: issues.isLoading ? "—" : openIssueCount,
       onClick: () => navigate(scope.scopedPath(METRIC_LINKS.openIssues)),
     },
@@ -100,7 +100,7 @@ export default function WorkOverviewPage() {
     ...(agentCenterAllowed
       ? [{
           key: "teams",
-          label: "Teams",
+          label: "协作团队",
           value: teams.isLoading ? "—" : (teams.data?.items.length ?? 0),
           onClick: () => navigate(scope.scopedPath(METRIC_LINKS.teams)),
         }]
@@ -110,12 +110,12 @@ export default function WorkOverviewPage() {
   return (
     <Page>
       <PageHeader
-        title="Overview"
-        description="Track durable work, agent execution, and the decisions that need your attention."
+        title="工作台"
+        description="跟踪持久化工作、智能体执行与需要你决策的事项。"
         actions={
           <Button asChild>
             <Link to={scope.scopedPath("/work/issues?new=1")}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> New issue
+              <Plus className="h-4 w-4" aria-hidden="true" /> 新建事项
             </Link>
           </Button>
         }
@@ -131,22 +131,22 @@ export default function WorkOverviewPage() {
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-4">
             <div>
-              <h2 className="text-[15px] font-semibold text-text">Needs attention</h2>
+              <h2 className="text-[15px] font-semibold text-text">需要我处理</h2>
               <p className="mt-1 text-sm text-text-3">
-                {attentionCount ? `${attentionCount} messages need attention` : "You are all caught up"}
+                {attentionCount ? `${attentionCount} 条消息待处理` : "已全部处理完毕"}
               </p>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link to={scope.scopedPath("/work/inbox")}>
-                Open inbox <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                打开收件箱 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent className="p-0">
             <AsyncState
               status={asyncStatusOf({ isLoading: inbox.isLoading, isError: inbox.isError, isEmpty: unreadItems.length === 0 })}
-              resource="attention messages"
-              emptyDescription="Mentions, blocked work, and approval requests will appear here."
+              resource="待处理消息"
+              emptyDescription="提及、被阻塞的工作和审批请求会显示在这里。"
               onRetry={() => inbox.refetch()}
             >
               <ul className="divide-y divide-border">
@@ -173,25 +173,25 @@ export default function WorkOverviewPage() {
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-4">
             <div>
-              <h2 className="text-[15px] font-semibold text-text">Recent issues</h2>
+              <h2 className="text-[15px] font-semibold text-text">最近事项</h2>
               <p className="mt-1 text-sm text-text-3">
-                {scope.selectorVisible ? "The latest work in this namespace" : "The latest work"}
+                {scope.selectorVisible ? "本命名空间最近的进展" : "最近的进展"}
               </p>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link to={scope.scopedPath("/work/issues")}>
-                View all <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                查看全部 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent className="p-0">
             <AsyncState
               status={asyncStatusOf({ isLoading: issues.isLoading, isError: issues.isError, isEmpty: issueItems.length === 0 })}
-              resource="issues"
-              emptyDescription="Create the first issue to start a durable work thread."
+              resource="事项"
+              emptyDescription="创建第一条事项，开始一个持久化的工作线程。"
               emptyAction={
                 <Button size="sm" asChild>
-                  <Link to={scope.scopedPath("/work/issues?new=1")}>Create issue</Link>
+                  <Link to={scope.scopedPath("/work/issues?new=1")}>创建事项</Link>
                 </Button>
               }
               onRetry={() => issues.refetch()}
@@ -216,7 +216,7 @@ export default function WorkOverviewPage() {
                           {issue.assigneeRef ? (
                             <EntityIdentityText identities={identities} type={issue.assigneeType} entityRef={issue.assigneeRef} />
                           ) : (
-                            <span>Unassigned</span>
+                            <span>未分配</span>
                           )}
                         </div>
                       </div>

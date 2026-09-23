@@ -25,7 +25,7 @@ import { ScopeProvider } from '@/app/ScopeContext';
 
 /**
  * 工作台试点（JICH-336）回归测试：
- * 1. 首屏第一张指标卡是「Needs attention」（PRD 5.3）；
+ * 1. 首屏第一张指标卡是「需要我处理」（PRD 5.3）；
  * 2. 指标卡是带筛选跳转的可交互元素（PRD 5.3）；
  * 3. 无智能体中心权限时不渲染 Teams 卡（PRD 5.3：无权限区块不渲染）。
  */
@@ -88,24 +88,24 @@ describe('asyncStatusOf', () => {
 });
 
 describe('WorkOverviewPage (pilot render)', () => {
-  it('renders "Needs attention" as the first metric card', () => {
+  it('renders "需要我处理" as the first metric card', () => {
     rolesOf.value = [];
     const html = renderPage();
-    const firstCard = html.indexOf('Needs attention');
+    const firstCard = html.indexOf('需要我处理');
     expect(firstCard).toBeGreaterThan(-1);
-    expect(html.indexOf('Open issues')).toBeGreaterThan(firstCard);
+    expect(html.indexOf('待办事项')).toBeGreaterThan(firstCard);
   });
 
   it('hides the Teams card without agent-center roles', () => {
     rolesOf.value = ['viewer'];
     const html = renderPage();
-    expect(html).not.toContain('>Teams<');
+    expect(html).not.toContain('>协作团队<');
   });
 
   it('shows the Teams card for agent-center roles', () => {
     rolesOf.value = ['agent_developer'];
     const html = renderPage();
-    expect(html).toContain('Teams');
+    expect(html).toContain('协作团队');
   });
 
   it('links attention metrics to the filtered inbox view', () => {

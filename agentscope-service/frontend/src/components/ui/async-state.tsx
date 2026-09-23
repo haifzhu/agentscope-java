@@ -27,10 +27,10 @@ export type AsyncStatus = 'loading' | 'empty' | 'error' | 'ready';
  * 这样「空状态/加载中/错误」不再由各页面自行编写。
  */
 export const asyncMessages = {
-  loading: (resource: string) => `Loading ${resource}`,
-  empty: (resource: string) => `No ${resource} yet`,
-  error: (resource: string) => `Could not load ${resource}`,
-  retry: 'Retry',
+  loading: (resource: string) => `正在加载${resource}…`,
+  empty: (resource: string) => `暂无${resource}`,
+  error: (resource: string) => `${resource}加载失败`,
+  retry: '重试',
 } as const;
 
 export interface AsyncStateProps {

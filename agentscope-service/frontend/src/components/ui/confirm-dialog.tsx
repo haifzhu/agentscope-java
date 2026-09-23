@@ -63,8 +63,8 @@ export function ConfirmDialog({
   title,
   description,
   dangerLevel = 'normal',
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel = '确认',
+  cancelLabel = '取消',
   confirmPhrase,
   confirmPhraseHint,
   onConfirm,
@@ -117,7 +117,7 @@ export function ConfirmDialog({
             <input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              aria-label="Confirmation input"
+              aria-label="确认输入"
               className={cn(
                 'h-10 w-full rounded-lg bg-surface px-3.5 text-sm text-text',
                 controlBorder,

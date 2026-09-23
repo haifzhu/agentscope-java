@@ -32,6 +32,7 @@ import './index.css';
 import AppShell from './app/AppShell';
 import { PrivateRoute } from './app/PrivateRoute';
 import { ScopeProvider, useControlPlaneScope } from './app/ScopeContext';
+import { ThemeProvider } from './app/theme/ThemeProvider';
 import { namespaceCan } from './lib/namespaceScope';
 import { getRoles } from './api/auth';
 
@@ -177,6 +178,7 @@ function OperatorAccess() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ScopeProvider><React.Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading console…</div>}><Routes>
@@ -333,5 +335,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </Routes></React.Suspense></ScopeProvider>
       </BrowserRouter>
     </QueryClientProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

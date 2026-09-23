@@ -30,10 +30,10 @@ export function formatRelative(iso?: string | null): string {
   if (Number.isNaN(t)) return iso;
   const diff = Date.now() - t;
   const sec = Math.round(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return `${sec} 秒前`;
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return `${min} 分钟前`;
   const hr = Math.round(min / 60);
-  if (hr < 48) return `${hr}h ago`;
-  return new Date(t).toLocaleString();
+  if (hr < 48) return `${hr} 小时前`;
+  return new Date(t).toLocaleString('zh-CN');
 }

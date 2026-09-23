@@ -34,6 +34,9 @@ const CONTRACT_ENFORCED = [
   'src/components/PressureGauge.tsx',
   'src/components/EmptyState.tsx',
   'src/components/Page.tsx',
+  // JICH-337：试点页与 AppShell 纳入 error 级契约（试点结论建议）
+  'src/features/work/WorkOverviewPage.tsx',
+  'src/app/AppShell.tsx',
 ];
 
 export default tseslint.config(

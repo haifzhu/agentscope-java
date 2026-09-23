@@ -37,28 +37,28 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const canOperate = admin || roles.includes('operator')
   const canAgentCenter = canOperate || roles.includes('agent_developer')
   const links = [
-    ['Overview', '/work/overview'],
-    ['Chat', '/work/chat'],
-    ['Issues', '/work/issues'],
-    ['Inbox', '/work/inbox'],
-    ['Automations', '/work/automations'],
+    ['工作台', '/work/overview'],
+    ['对话', '/work/chat'],
+    ['事项', '/work/issues'],
+    ['收件箱', '/work/inbox'],
+    ['自动化', '/work/automations'],
     ...(canAgentCenter ? [
-      ['Agents', '/agent-center/agents'],
-      ['Teams', '/agent-center/teams'],
-      ['Workflows', '/agent-center/workflows'],
-      ...(admin ? [['Channels', '/agent-center/entrypoints']] : []),
-      ['Workspaces', '/agent-center/workspaces'],
-      ['Environments', '/agent-center/environments'],
-      ['Memory', '/agent-center/memory'],
-      ['Vault', '/agent-center/vaults'],
+      ['智能体', '/agent-center/agents'],
+      ['团队', '/agent-center/teams'],
+      ['工作流', '/agent-center/workflows'],
+      ...(admin ? [['接入渠道', '/agent-center/entrypoints']] : []),
+      ['工作空间', '/agent-center/workspaces'],
+      ['运行环境', '/agent-center/environments'],
+      ['记忆库', '/agent-center/memory'],
+      ['密钥库', '/agent-center/vaults'],
     ] : []),
   ]
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 p-6" onClick={() => onOpenChange(false)}>
-      <div className="mx-auto max-w-lg rounded-xl bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
-        <div className="mb-3 font-semibold">Go to</div>
+    <div className="fixed inset-0 z-50 bg-scrim p-6" onClick={() => onOpenChange(false)} role="presentation">
+      <div className="mx-auto max-w-lg rounded-xl border border-border bg-surface p-4 shadow-xl" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="命令面板">
+        <div className="mb-3 font-semibold text-text">跳转到</div>
         {links.map(([label, to]) => (
-          <a key={to} href={to} className="block rounded-lg px-3 py-2 hover:bg-muted">
+          <a key={to} href={to} className="block rounded-lg px-3 py-2 text-text-2 hover:bg-hover hover:text-text">
             {label}
           </a>
         ))}
