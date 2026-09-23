@@ -81,7 +81,8 @@ const navigation: NavGroup[] = [
       { to: '/work/overview', label: '工作台', icon: CircleGauge, end: true },
       { to: '/work/chat', label: '对话', icon: MessageSquare },
       { to: '/work/issues', label: '事项', icon: FileStack },
-      { to: '/work/inbox', label: '收件箱', icon: ClipboardCheck },
+      { to: '/work/inbox', label: '待办中心', icon: ClipboardCheck },
+      { to: '/work/approvals', label: '审批中心', icon: ShieldCheck },
       { to: '/work/automations', label: '自动化', icon: Activity },
     ],
   },
@@ -135,7 +136,8 @@ const routeLabels: Array<[string, string]> = [
   ['/work/overview', '工作台'],
   ['/work/chat', '对话'],
   ['/work/issues', '事项'],
-  ['/work/inbox', '收件箱'],
+  ['/work/inbox', '待办中心'],
+  ['/work/approvals', '审批中心'],
   ['/work/automations', '自动化'],
   ['/work/activity', '活动'],
   ['/work/executions', '执行记录'],
@@ -206,6 +208,8 @@ export default function AppShell() {
   });
   const summary = inboxSummary.data?.summary;
   const approvalAttention = summary ? { total: summary.attentionTotal, unread: summary.unread, pending: summary.pendingApprovals } : undefined;
+  // 审批中心角标只数待审批请求（PRD 5.4：审批从收件箱拆分为独立入口）。
+  const approvalsAttention = summary ? { total: summary.pendingApprovals, unread: 0, pending: summary.pendingApprovals } : undefined;
   const canAgentCenter = scope.roles.length > 0 || admin || roles.includes('agent_developer') || roles.includes('operator');
   const visibleNavigation = navigation.map((group) => ({
     ...group,
@@ -258,7 +262,7 @@ export default function AppShell() {
         <nav aria-label="主导航" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
           {visibleNavigation.map((group) => <div key={group.id} className="space-y-1">
             {group.label && <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-4">{group.label}</div>}
-            {group.items.map((item) => <SidebarLink key={item.to} item={item} attention={item.to === '/work/inbox' ? approvalAttention : undefined} />)}
+            {group.items.map((item) => <SidebarLink key={item.to} item={item} attention={item.to === '/work/inbox' ? approvalAttention : item.to === '/work/approvals' ? approvalsAttention : undefined} />)}
           </div>)}
         </nav>
 

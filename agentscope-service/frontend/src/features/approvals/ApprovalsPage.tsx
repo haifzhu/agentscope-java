@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-// Compatibility entry point for the original approval page.
-export { default } from "@/features/inbox/InboxPage";
+// 兼容入口：审批中心已成为独立页面（PRD 5.4），旧导入路径指向新页。
+export { default } from "@/features/approvals/ApprovalsCenterPage";

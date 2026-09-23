@@ -79,7 +79,8 @@ const WorkOverviewPage = React.lazy(() => import('./features/work/WorkOverviewPa
 const WorkActivityPage = React.lazy(() => import('./features/work/WorkActivityPage'));
 const TasksPage = React.lazy(() => import('./features/tasks/TasksPage'));
 const TaskDetailPage = React.lazy(() => import('./features/tasks/TaskDetailPage'));
-const ApprovalsPage = React.lazy(() => import('./features/approvals/ApprovalsPage'));
+const InboxPage = React.lazy(() => import('./features/inbox/InboxPage'));
+const ApprovalsCenterPage = React.lazy(() => import('./features/approvals/ApprovalsCenterPage'));
 const AutomationsPage = React.lazy(() => import('./features/operate/AutomationsPage'));
 const DefinitionsPage = React.lazy(() => import('./features/orchestration/DefinitionsPage'));
 const RunsPage = React.lazy(() => import('./features/orchestration/RunsPage'));
@@ -200,8 +201,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="chat" element={<ChatPage />} />
               <Route path="issues" element={<IssuesPage />} />
               <Route path="issues/:issueId" element={<IssueDetailPage />} />
-              <Route path="inbox" element={<ApprovalsPage />} />
-              <Route path="approvals" element={<RedirectWithSearch to="/work/inbox" />} />
+              <Route path="inbox" element={<InboxPage />} />
+              <Route path="approvals" element={<ApprovalsCenterPage />} />
               <Route path="automations" element={<AutomationsPage />} />
               <Route path="activity" element={<WorkActivityPage />} />
               <Route element={<OperatorAccess />}>

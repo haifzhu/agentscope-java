@@ -61,6 +61,7 @@ async function mockInbox(page: Page, options: { failApproval?: boolean; failRead
       if (path.endsWith("/archive")) item.archived = true;
       return json({ item });
     }
+    if (path === "/api/v1/approvals") return json({ items: approval.status === "pending" ? [approval] : [] });
     if (path.startsWith(`/api/v1/approvals/${approvalId}`)) {
       if (options.failApproval) return json({ error: "not found" }, 404);
       if (path.endsWith("/decide")) {
@@ -92,14 +93,14 @@ test("unifies approvals and embeds an issue; viewing marks only the selected mes
   const state = await mockInbox(page);
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/work/inbox");
-  await expect(page.getByRole("heading", { name: "Select a message" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "选择一条消息" })).toBeVisible();
   expect(state.reads).toEqual([]);
   await expect(page.locator('[data-inbox-id="approval-message"]')).toHaveCount(1);
   await page.locator('[data-inbox-id="review-message"]').click();
   await expect(page.getByTestId("inbox-detail").getByRole("heading", { name: "Inbox redesign" })).toBeVisible();
   await expect(page.getByText("The final result is ready for your review.")).toBeVisible();
   await expect.poll(() => state.reads).toEqual(["review-message"]);
-  await expect(page.locator('[data-inbox-id="review-message"]').getByLabel("Unread")).toHaveCount(0);
+  await expect(page.locator('[data-inbox-id="review-message"]').getByLabel("未读")).toHaveCount(0);
   await expect(page.locator('[data-inbox-id="review-message"]')).toBeVisible();
   await expect(page).toHaveURL(/\/work\/inbox\?item=review-message/);
   expect(errors).toEqual([]);
@@ -109,18 +110,14 @@ test("unifies approvals and embeds an issue; viewing marks only the selected mes
 test("read pending approval stays actionable and decision is made in the detail pane", async ({ page }) => {
   const state = await mockInbox(page);
   await page.goto("/work/inbox?item=approval-message");
-  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "批准", exact: true })).toBeVisible();
   await expect.poll(() => state.reads).toEqual(["approval-message"]);
-  await expect(page.locator('[data-inbox-id="approval-message"]').getByText("Pending approval")).toBeVisible();
-  await expect(page.getByText("1 pending approvals", { exact: true })).toBeVisible();
-  await page.getByLabel("Decision note").fill("Reviewed the dry run.");
-  await page.locator('[data-inbox-id="review-message"]').click();
-  await page.locator('[data-inbox-id="approval-message"]').click();
-  await expect(page.getByLabel("Decision note")).toHaveValue("Reviewed the dry run.");
+  await expect(page.locator('[data-inbox-id="approval-message"]').getByText("待审批")).toBeVisible();
+  await expect(page.getByText("1 条待审批")).toBeVisible();
   await page.screenshot({ path: "/tmp/agentscope-inbox-approval.png", fullPage: true });
-  await page.getByRole("button", { name: "Approve", exact: true }).click();
-  await expect(page.getByText("This request is approved.")).toBeVisible();
-  expect(state.decisions).toEqual([{ status: "approved", expectedVersion: 1, decision: { note: "Reviewed the dry run." } }]);
+  await page.getByRole("button", { name: "批准", exact: true }).click();
+  await expect(page.getByText("该请求已批准。")).toBeVisible();
+  expect(state.decisions).toEqual([{ status: "approved", expectedVersion: 1, decision: { note: "" } }]);
   await expect(page).toHaveURL(/item=approval-message/);
 });
 
@@ -128,10 +125,10 @@ test("unread filter retains the selected row and filters approvals by type", asy
   await mockInbox(page);
   await page.goto("/work/inbox?view=unread");
   await page.locator('[data-inbox-id="mention-message"]').click();
-  await expect(page.locator('[data-inbox-id="mention-message"]').getByLabel("Unread")).toHaveCount(0);
+  await expect(page.locator('[data-inbox-id="mention-message"]').getByLabel("未读")).toHaveCount(0);
   await expect(page.getByTestId("inbox-detail").getByRole("heading", { name: "Inbox redesign" })).toBeVisible();
-  await page.getByRole("button", { name: "Filter inbox" }).click();
-  await page.getByLabel("Message type", { exact: true }).selectOption("approval");
+  await page.getByRole("button", { name: "筛选待办" }).click();
+  await page.getByLabel("消息类型", { exact: true }).selectOption("approval");
   await expect(page.locator("[data-inbox-id]")).toHaveCount(1);
   await expect(page.locator('[data-inbox-id="approval-message"]')).toBeVisible();
 });
@@ -139,13 +136,13 @@ test("unread filter retains the selected row and filters approvals by type", asy
 test("failed approval details do not mark read and read failures can be retried", async ({ page }) => {
   const state = await mockInbox(page, { failApproval: true, failRead: true });
   await page.goto("/work/inbox?item=approval-message");
-  await expect(page.getByRole("heading", { name: "Approval unavailable" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "审批不可用" })).toBeVisible({ timeout: 15000 });
   expect(state.reads).toEqual([]);
   await page.locator('[data-inbox-id="system-message"]').click();
-  await expect(page.getByRole("alert")).toContainText("Could not mark this message as read");
+  await expect(page.getByRole("alert")).toContainText("该消息暂时无法标记为已读");
   expect(state.items[3].read).toBe(false);
   state.options.failRead = false;
-  await page.getByRole("alert").getByRole("button", { name: "Retry" }).click();
+  await page.getByRole("alert").getByRole("button", { name: "重试" }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(state.items[3].read).toBe(true);
 });
@@ -153,13 +150,13 @@ test("failed approval details do not mark read and read failures can be retried"
 test("mobile back preserves the inbox and the legacy approval URL redirects", async ({ page }) => {
   await mockInbox(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/work/approvals?view=all");
+  await page.goto("/control/approvals?view=all");
   await expect(page).toHaveURL(/\/work\/inbox\?view=all/);
   await page.locator('[data-inbox-id="approval-message"]').click();
-  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Inbox messages" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "批准", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "待办消息列表" })).toBeHidden();
   await page.screenshot({ path: "/tmp/agentscope-inbox-mobile.png", fullPage: true });
-  await page.getByRole("button", { name: "Inbox", exact: true }).click();
+  await page.getByRole("button", { name: "待办", exact: true }).click();
   await expect(page.locator('[data-inbox-id="approval-message"]')).toBeVisible();
   await expect(page).toHaveURL(/view=all/);
 });
@@ -168,33 +165,33 @@ test("mobile back preserves the inbox and the legacy approval URL redirects", as
 test("accepts a result directly in Inbox and clears the review action without losing selection", async ({ page }) => {
   const state = await mockInbox(page);
   await page.goto('/work/inbox?item=review-message');
-  const panel = page.getByRole('region', { name: 'Issue review', exact: true });
-  await expect(panel.getByRole('button', { name: 'Accept result', exact: true })).toBeVisible();
+  const panel = page.getByRole('region', { name: '事项评审', exact: true });
+  await expect(panel.getByRole('button', { name: '验收结果', exact: true })).toBeVisible();
   expect(state.reviews).toEqual([]);
   await page.screenshot({ path: '/tmp/agentscope-inbox-review-actions.png', fullPage: true });
-  await panel.getByRole('button', { name: 'Accept result', exact: true }).click();
-  await expect(panel.getByRole('status')).toHaveText('Result accepted. This issue is Done.');
+  await panel.getByRole('button', { name: '验收结果', exact: true }).click();
+  await expect(panel.getByRole('status')).toHaveText('结果已验收，该事项已完成。');
   expect(state.reviews).toEqual([{ action: 'accept', body: { expectedVersion: 1 } }]);
   expect(state.items[1].needsAction).toBe(false);
-  await expect(page.locator('[data-inbox-id="review-message"]').getByText('Needs review', { exact: true })).toHaveCount(0);
-  await expect(panel.getByRole('button', { name: 'Accept result', exact: true })).toHaveCount(0);
-  await expect(page.getByText('1 need action', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-inbox-id="review-message"]').getByText('需要评审', { exact: true })).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: '验收结果', exact: true })).toHaveCount(0);
+  await expect(page.getByText('1 条需要处理')).toBeVisible();
   await expect(page).toHaveURL(/item=review-message/);
 });
 
 test("requests changes in Inbox, requires feedback and preserves its draft across messages", async ({ page }) => {
   const state = await mockInbox(page);
   await page.goto('/work/inbox?item=review-message');
-  await page.getByRole('button', { name: 'Request changes', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Send review', exact: true })).toBeDisabled();
-  await page.getByLabel('Changes needed (required)').fill('Please add dated sources and complete the missing research.');
+  await page.getByRole('button', { name: '要求修改', exact: true }).click();
+  await expect(page.getByRole('button', { name: '提交评审', exact: true })).toBeDisabled();
+  await page.getByLabel('需要修改的内容（必填）').fill('Please add dated sources and complete the missing research.');
   await page.locator('[data-inbox-id="mention-message"]').click();
-  await expect(page.getByRole('region', { name: 'Issue review', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: '事项评审', exact: true })).toHaveCount(0);
   await page.locator('[data-inbox-id="review-message"]').click();
-  await page.getByRole('button', { name: 'Request changes', exact: true }).click();
-  await expect(page.getByLabel('Changes needed (required)')).toHaveValue('Please add dated sources and complete the missing research.');
-  await page.getByRole('button', { name: 'Send review', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Issue review', exact: true }).getByRole('status')).toContainText('Changes requested.');
+  await page.getByRole('button', { name: '要求修改', exact: true }).click();
+  await expect(page.getByLabel('需要修改的内容（必填）')).toHaveValue('Please add dated sources and complete the missing research.');
+  await page.getByRole('button', { name: '提交评审', exact: true }).click();
+  await expect(page.getByRole('region', { name: '事项评审', exact: true }).getByRole('status')).toContainText('已要求修改。');
   expect(state.reviews).toEqual([{ action: 'reject', body: { expectedVersion: 1, reason: 'Please add dated sources and complete the missing research.' } }]);
   expect(state.issue.status).toBe('in_progress');
   await expect(page.getByTestId('inbox-detail').getByText('Please add dated sources and complete the missing research.', { exact: true })).toBeVisible();
@@ -203,8 +200,8 @@ test("requests changes in Inbox, requires feedback and preserves its draft acros
 for (const status of [400, 403, 409]) test(`review failure ${status} preserves the task and reports the reason`, async ({ page }) => {
   const state = await mockInbox(page, { reviewError: status });
   await page.goto('/work/inbox?item=review-message');
-  const panel = page.getByRole('region', { name: 'Issue review', exact: true });
-  await panel.getByRole('button', { name: 'Accept result', exact: true }).click();
+  const panel = page.getByRole('region', { name: '事项评审', exact: true });
+  await panel.getByRole('button', { name: '验收结果', exact: true }).click();
   await expect(panel.getByRole('alert')).toBeVisible();
   expect(state.reviews).toHaveLength(1);
   expect(state.issue.status).toBe('in_review');
@@ -215,9 +212,9 @@ for (const status of [400, 403, 409]) test(`review failure ${status} preserves t
 test("stale review messages cannot accept an issue that is no longer in review", async ({ page }) => {
   const state = await mockInbox(page, { initialIssueStatus: 'done' });
   await page.goto('/work/inbox?item=review-message');
-  const panel = page.getByRole('region', { name: 'Issue review', exact: true });
-  await expect(panel.getByText('This issue has already been accepted.')).toBeVisible();
-  await expect(panel.getByRole('button', { name: 'Accept result', exact: true })).toHaveCount(0);
+  const panel = page.getByRole('region', { name: '事项评审', exact: true });
+  await expect(panel.getByText('该事项已验收通过。')).toBeVisible();
+  await expect(panel.getByRole('button', { name: '验收结果', exact: true })).toHaveCount(0);
   expect(state.reviews).toHaveLength(0);
 });
 
@@ -225,12 +222,36 @@ test("mobile reviewers can enter feedback and cancel without changing the issue"
   const state = await mockInbox(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/work/inbox?item=review-message');
-  const panel = page.getByRole('region', { name: 'Issue review', exact: true });
-  await panel.getByRole('button', { name: 'Request changes', exact: true }).click();
-  await panel.getByLabel('Changes needed (required)').fill('Add sources before acceptance.');
+  const panel = page.getByRole('region', { name: '事项评审', exact: true });
+  await panel.getByRole('button', { name: '要求修改', exact: true }).click();
+  await panel.getByLabel('需要修改的内容（必填）').fill('Add sources before acceptance.');
   await page.screenshot({ path: '/tmp/agentscope-inbox-review-mobile.png', fullPage: true });
-  await panel.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(panel.getByRole('button', { name: 'Accept result', exact: true })).toBeEnabled();
+  await panel.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(panel.getByRole('button', { name: '验收结果', exact: true })).toBeEnabled();
   expect(state.issue.status).toBe('in_review');
   expect(state.reviews).toEqual([]);
+});
+
+
+test("rejecting an approval requires a reason before the decision can be submitted", async ({ page }) => {
+  const state = await mockInbox(page);
+  await page.goto("/work/inbox?item=approval-message");
+  await page.getByRole("button", { name: "驳回", exact: true }).click();
+  await expect(page.getByTestId("rejection-reason-hint")).toBeVisible();
+  await expect(page.getByRole("button", { name: "确认驳回", exact: true })).toBeDisabled();
+  await page.getByLabel("驳回理由（必填）").fill("命令参数缺少灰度标识。");
+  await page.getByRole("button", { name: "确认驳回", exact: true }).click();
+  await expect(page.getByText("该请求已驳回。")).toBeVisible();
+  expect(state.decisions).toEqual([{ status: "rejected", expectedVersion: 1, decision: { note: "命令参数缺少灰度标识。" } }]);
+});
+
+test("approvals center lists pending requests with batch group and approves directly", async ({ page }) => {
+  const state = await mockInbox(page);
+  await page.goto("/work/approvals");
+  await expect(page.getByRole("heading", { name: "审批中心" })).toBeVisible();
+  await expect(page.getByText("Review the deployment command before execution.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "批准", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "批准", exact: true }).first().click();
+  await expect.poll(() => state.decisions).toHaveLength(1);
+  expect(state.decisions[0]).toEqual({ status: "approved", expectedVersion: 1, decision: { note: "" } });
 });
