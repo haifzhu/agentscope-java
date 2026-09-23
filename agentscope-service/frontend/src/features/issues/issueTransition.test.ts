@@ -46,6 +46,7 @@ describe("issue status machine (PRD 5.10.3)", () => {
   });
   it("refuses illegal transitions without touching the API", async () => {
     const { transitionIssue } = await import("@/api/collaboration");
+    vi.clearAllMocks();
     await expect(submitIssueTransition({ id: "i", status: "done", version: 1 }, "in_review")).rejects.toThrow("当前状态不允许变更为");
     expect(transitionIssue).not.toHaveBeenCalled();
   });

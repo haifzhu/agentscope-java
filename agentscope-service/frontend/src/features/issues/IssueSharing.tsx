@@ -31,19 +31,19 @@ export function IssueSharing({ issue }: { issue: Issue }) {
   useEffect(() => setPolicy(issue.access ?? { mode: 'private' }), [issue.access, issue.id]);
   const owned = issue.creator.type === 'human' && [currentAccount(), getUsername()].includes(issue.creator.ref || '');
   const save = useMutation({ mutationFn: () => updateIssueAccess(issue.id, issue.version, policy), onSuccess: () => qc.invalidateQueries() });
-  if (issue.parentIssueId) return <section className="border-t pt-4 text-xs text-muted-foreground">Sharing is inherited from the root Issue.</section>;
-  return <section className="space-y-3 border-t pt-4"><h2 className="text-sm font-semibold">Sharing</h2>
+  if (issue.parentIssueId) return <section className="border-t border-border pt-4 text-xs text-text-3">分享范围继承自根事项。</section>;
+  return <section className="space-y-3 border-t pt-4"><h2 className="text-sm font-semibold text-text">分享范围</h2>
     {owned ? <>
-      <select aria-label="Issue sharing" className="h-9 w-full rounded-md border bg-white px-2 text-sm" value={policy.mode} onChange={e => setPolicy({ mode: e.target.value as IssueAccess['mode'], members: undefined })}><option value="private">Private</option><option value="shared">Selected members</option><option value="namespace">Namespace members</option></select>
+      <select aria-label="事项分享范围" className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm text-text" value={policy.mode} onChange={e => setPolicy({ mode: e.target.value as IssueAccess['mode'], members: undefined })}><option value="private">私有</option><option value="shared">指定成员</option><option value="namespace">命名空间成员</option></select>
       {policy.mode === 'shared' && <>
-        {Object.entries(policy.members ?? {}).map(([id, r]) => <div key={id} className="flex items-center gap-1 text-xs"><span className="min-w-0 flex-1 truncate" title={id}>{id}</span><span>{r}</span><Button variant="ghost" size="sm" onClick={() => { const members = { ...policy.members }; delete members[id]; setPolicy({ ...policy, members }); }}>Remove</Button></div>)}
-        <Input aria-label="Collaborator account ID" value={account} onChange={e => setAccount(e.target.value)} placeholder="Namespace member account ID" />
-        <div className="flex gap-2"><select aria-label="Collaborator permission" className="min-w-0 flex-1 rounded border px-2 text-xs" value={role} onChange={e => setRole(e.target.value as typeof role)}><option value="reader">Reader</option><option value="contributor">Contributor</option></select><Button variant="outline" size="sm" disabled={!account.trim()} onClick={() => { setPolicy({ ...policy, members: { ...policy.members, [account.trim()]: role } }); setAccount(''); }}>Add</Button></div>
+        {Object.entries(policy.members ?? {}).map(([id, r]) => <div key={id} className="flex items-center gap-1 text-xs"><span className="min-w-0 flex-1 truncate" title={id}>{id}</span><span>{r}</span><Button variant="ghost" size="sm" onClick={() => { const members = { ...policy.members }; delete members[id]; setPolicy({ ...policy, members }); }}>移除</Button></div>)}
+        <Input aria-label="协作者账号" value={account} onChange={e => setAccount(e.target.value)} placeholder="命名空间成员账号" />
+        <div className="flex gap-2"><select aria-label="协作者权限" className="min-w-0 flex-1 rounded border px-2 text-xs" value={role} onChange={e => setRole(e.target.value as typeof role)}><option value="reader">只读</option><option value="contributor">可协作</option></select><Button variant="outline" size="sm" disabled={!account.trim()} onClick={() => { setPolicy({ ...policy, members: { ...policy.members, [account.trim()]: role } }); setAccount(''); }}>添加</Button></div>
       </>}
-      <Button size="sm" disabled={save.isPending} onClick={() => save.mutate()}>Save sharing</Button>
+      <Button size="sm" disabled={save.isPending} onClick={() => save.mutate()}>保存分享范围</Button>
       {save.error && <p role="alert" className="text-xs text-destructive">{save.error.message}</p>}
-      {save.isSuccess && <p className="text-xs text-emerald-700">Sharing saved.</p>}
-    </> : <p className="text-xs capitalize">{issue.access?.mode || 'private'}</p>}
-    <p className="text-xs text-muted-foreground">Applies to child Issues, comments, execution records and attachments. Agent developers do not automatically receive access.</p>
+      {save.isSuccess && <p className="text-xs text-success-text">分享范围已保存。</p>}
+    </> : <p className="text-xs text-text-2">{issue.access?.mode === 'shared' ? '指定成员' : issue.access?.mode === 'namespace' ? '命名空间成员' : '私有'}</p>}
+    <p className="text-xs text-text-3">作用于子事项、评论、执行记录与附件。智能体开发者不会自动获得访问权限。</p>
   </section>;
 }

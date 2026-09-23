@@ -34,55 +34,55 @@ export function IssueAcceptanceEditor({ value, busy, onSave }: {
   const [rules, setRules] = useState<AcceptanceCriteria>();
   const save = async (next: AcceptanceCriteria, complete?: () => void) => {
     if (busy) return;
-    try { await onSave(next); complete?.(); } catch { /* The page displays the mutation error. */ }
+    try { await onSave(next); complete?.(); } catch { /* 页面统一展示变更错误。 */ }
   };
   const add = () => {
     if (draft.trim()) void save({ ...criteria, checklist: [...checklist, { id: crypto.randomUUID(), text: draft.trim(), required: true, satisfied: false }] }, () => setDraft(""));
   };
 
-  return <section className="border-t border-slate-200 pt-5" aria-label="Acceptance criteria">
-    <h2 className="mb-3 flex items-center justify-between text-sm font-semibold text-slate-900">
-      <span className="flex items-center gap-2"><ListChecks className="h-4 w-4" /> Acceptance</span>
-      {!!checklist.length && <span className="text-xs font-normal text-muted-foreground">{checklist.filter(entry => entry.satisfied).length}/{checklist.length}</span>}
+  return <section className="border-t border-border pt-5" aria-label="验收标准">
+    <h2 className="mb-3 flex items-center justify-between text-sm font-semibold text-text">
+      <span className="flex items-center gap-2"><ListChecks className="h-4 w-4" />验收</span>
+      {!!checklist.length && <span className="text-xs font-normal text-muted-foreground">{checklist.filter(entry => entry.satisfied).length}/{checklist.length} 已满足</span>}
     </h2>
-    <p className="mb-2 text-xs leading-5 text-muted-foreground">Required items must be satisfied before marking this issue Done.</p>
+    <p className="mb-2 text-xs leading-5 text-text-3">必选项需全部满足后才能将事项标记为已完成。</p>
     <div className="space-y-2">
       {checklist.map((criterion, index) => {
-        const label = criterion.text || criterion.id || `Criterion ${index + 1}`;
-        return <div key={criterion.id || index} className="rounded-lg bg-white p-2 text-sm">
+        const label = criterion.text || criterion.id || `标准 ${index + 1}`;
+        return <div key={criterion.id || index} className="rounded-lg bg-surface p-2 text-sm">
           {editing === index ? <form className="space-y-2" onSubmit={event => {
             event.preventDefault();
             if (editText.trim()) void save({ ...criteria, checklist: checklist.map((entry, i) => i === index ? { ...entry, text: editText.trim() } : entry) }, () => setEditing(undefined));
           }}>
-            <Input aria-label="Criterion text" value={editText} onChange={event => setEditText(event.target.value)} autoFocus />
-            <div className="flex gap-1"><Button size="sm" disabled={busy || !editText.trim()}>Save criterion</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(undefined)}>Cancel</Button></div>
+            <Input aria-label="标准内容" value={editText} onChange={event => setEditText(event.target.value)} autoFocus />
+            <div className="flex gap-1"><Button size="sm" disabled={busy || !editText.trim()}>保存标准</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditing(undefined)}>取消</Button></div>
           </form> : <div className="flex items-start gap-1">
             <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
               <input type="checkbox" className="mt-1" checked={!!criterion.satisfied} disabled={busy} onChange={() => void save({ ...criteria, checklist: checklist.map((entry, i) => i === index ? { ...entry, satisfied: !entry.satisfied } : entry) })} />
-              <span className={cn("break-words", criterion.satisfied && "text-muted-foreground line-through")}>{label}{criterion.required === false && <span className="block text-xs text-muted-foreground">Optional</span>}</span>
+              <span className={cn("break-words", criterion.satisfied && "text-text-3 line-through")}>{label}{criterion.required === false && <span className="block text-xs text-text-3">可选项</span>}</span>
             </label>
-            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={`Edit criterion: ${label}`} disabled={busy} onClick={() => { setEditText(label); setEditing(index); }}><Pencil className="h-3 w-3" /></Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={`Remove criterion: ${label}`} disabled={busy} onClick={() => void save({ ...criteria, checklist: checklist.filter((_, i) => i !== index) })}><X className="h-3 w-3" /></Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={`编辑标准：${label}`} disabled={busy} onClick={() => { setEditText(label); setEditing(index); }}><Pencil className="h-3 w-3" /></Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" aria-label={`移除标准：${label}`} disabled={busy} onClick={() => void save({ ...criteria, checklist: checklist.filter((_, i) => i !== index) })}><X className="h-3 w-3" /></Button>
           </div>}
         </div>;
       })}
       <form className="flex gap-1" onSubmit={event => { event.preventDefault(); add(); }}>
-        <Input aria-label="New acceptance criterion" className="h-8 bg-white text-xs" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Add acceptance criterion" />
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={!draft.trim() || busy} aria-label="Add acceptance criterion"><Plus className="h-4 w-4" /></Button>
+        <Input aria-label="新增验收标准" className="h-8 bg-surface text-xs" value={draft} onChange={event => setDraft(event.target.value)} placeholder="添加验收标准" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={!draft.trim() || busy} aria-label="添加验收标准"><Plus className="h-4 w-4" /></Button>
       </form>
-      {rules ? <form className="space-y-3 rounded-lg border bg-white p-3 text-xs" onSubmit={event => {
+      {rules ? <form className="space-y-3 rounded-lg border border-border bg-surface p-3 text-xs" onSubmit={event => {
         event.preventDefault();
         void save({ ...criteria, requiredResult: !!rules.requiredResult, minimumArtifacts: rules.minimumArtifacts || 0, minimumApprovals: rules.minimumApprovals || 0 }, () => setRules(undefined));
       }}>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={!!rules.requiredResult} onChange={event => setRules({ ...rules, requiredResult: event.target.checked })} /> Require result comment</label>
-        <label className="block space-y-1"><span>Minimum artifacts</span><Input type="number" min="0" step="1" required value={rules.minimumArtifacts ?? 0} onChange={event => setRules({ ...rules, minimumArtifacts: Number(event.target.value) })} /></label>
-        <label className="block space-y-1"><span>Minimum approvals</span><Input type="number" min="0" step="1" required value={rules.minimumApprovals ?? 0} onChange={event => setRules({ ...rules, minimumApprovals: Number(event.target.value) })} /></label>
-        <div className="flex gap-1"><Button size="sm" disabled={busy}><Check className="h-3 w-3" /> Save rules</Button><Button type="button" variant="ghost" size="sm" onClick={() => setRules(undefined)}>Cancel</Button></div>
-      </form> : <div className="text-xs leading-5 text-muted-foreground">
-        {criteria.requiredResult && <div>Result comment required</div>}
-        {!!criteria.minimumArtifacts && <div>{criteria.minimumArtifacts} artifact(s) required</div>}
-        {!!criteria.minimumApprovals && <div>{criteria.minimumApprovals} approval(s) required</div>}
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => setRules({ ...criteria })}>Edit acceptance rules</Button>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={!!rules.requiredResult} onChange={event => setRules({ ...rules, requiredResult: event.target.checked })} /> 要求提交结果评论</label>
+        <label className="block space-y-1"><span>最少产物数</span><Input type="number" min="0" step="1" required value={rules.minimumArtifacts ?? 0} onChange={event => setRules({ ...rules, minimumArtifacts: Number(event.target.value) })} /></label>
+        <label className="block space-y-1"><span>最少批准数</span><Input type="number" min="0" step="1" required value={rules.minimumApprovals ?? 0} onChange={event => setRules({ ...rules, minimumApprovals: Number(event.target.value) })} /></label>
+        <div className="flex gap-1"><Button size="sm" disabled={busy}><Check className="h-3 w-3" /> 保存规则</Button><Button type="button" variant="ghost" size="sm" onClick={() => setRules(undefined)}>取消</Button></div>
+      </form> : <div className="text-xs leading-5 text-text-3">
+        {criteria.requiredResult && <div>要求提交结果评论</div>}
+        {!!criteria.minimumArtifacts && <div>{criteria.minimumArtifacts} 个产物必需</div>}
+        {!!criteria.minimumApprovals && <div>{criteria.minimumApprovals} 个批准必需</div>}
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => setRules({ ...criteria })}>编辑验收规则</Button>
       </div>}
     </div>
   </section>;
