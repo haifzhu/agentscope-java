@@ -42,7 +42,7 @@ export const DrawerContent = React.forwardRef<
   DrawerContentProps
 >(({ className, children, side = 'right', size = 'md', ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[color-mix(in_oklab,var(--color-canvas)_72%,transparent)] backdrop-blur-[1px]" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim backdrop-blur-[1px]" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

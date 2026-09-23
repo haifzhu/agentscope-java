@@ -37,23 +37,28 @@ const PALETTE = [
   'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose',
 ].join('|');
 
-/** 颜色属性前缀。 */
+/** 颜色属性前缀。ring-offset-* 与 placeholder-* 也必须覆盖，
+    否则 `ring-offset-slate-200`、`placeholder-slate-400` 会漏检。 */
 const COLOR_PREFIX = [
-  'bg', 'text', 'border', 'ring', 'divide', 'outline', 'decoration',
-  'from', 'via', 'to', 'fill', 'stroke', 'accent', 'caret', 'shadow',
+  'bg', 'text', 'border', 'ring', 'ring-offset', 'divide', 'outline', 'decoration',
+  'from', 'via', 'to', 'fill', 'stroke', 'accent', 'caret', 'shadow', 'placeholder',
 ].join('|');
 
 /** 变体前缀链，如 `dark:hover:`、`group-focus:`、`sm:`。 */
 const VARIANT = '(?:[a-z-]+(?:-\\[[^\\]]+\\])?:)*';
 
+/** 透明度修饰符与 important 后缀，如 `/35`、`/80`、`!`。 */
+const SUFFIX = '(?:\\/\\d+)?!?';
+
 const PALETTE_RE = new RegExp(
-  `\\b${VARIANT}(?:${COLOR_PREFIX})-(?:${PALETTE})-(?:50|100|200|300|400|500|600|700|800|900|950)\\b`,
+  `\\b${VARIANT}(?:${COLOR_PREFIX})-(?:${PALETTE})-(?:50|100|200|300|400|500|600|700|800|900|950)${SUFFIX}(?![\\w-])`,
   'g',
 );
 
-/** 暗色下必然失效的字面色：白底与纯黑字。 */
+/** 暗色下必然失效的字面色：白底、纯黑字/底，以及其他属性的白/黑。
+    覆盖全部颜色前缀，避免 `text-white`、`ring-white`、`fill-white` 漏检。 */
 const LITERAL_RE = new RegExp(
-  `\\b${VARIANT}(?:bg-white|text-black|bg-black|border-white|divide-white|from-white|to-white)\\b|\\b${VARIANT}bg-white\\/\\d+\\b`,
+  `\\b${VARIANT}(?:${COLOR_PREFIX})-(?:white|black)${SUFFIX}(?![\\w-])`,
   'g',
 );
 

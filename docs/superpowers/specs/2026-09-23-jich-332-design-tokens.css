@@ -83,6 +83,20 @@
   --radius-md: 8px;
   --radius-lg: 12px;
 
+  /* 阴影三档【JICH-334 实施修正】
+     Tailwind v4 会把 @theme 里 --shadow-* 的**字面值内联**进 .shadow-N
+     工具类（实测编译产物为 `--tw-shadow:0 1px 2px 0 #0f172a0a`），
+     导致 .dark 中的阴影覆盖成为死代码、暗色阴影不生效。
+     故此处只持有 var(--elevation-N)，真实取值放在第 2 层。 */
+  --shadow-1: var(--elevation-1);
+  --shadow-2: var(--elevation-2);
+  --shadow-3: var(--elevation-3);
+  --shadow-sm: var(--elevation-1);
+  --shadow-md: var(--elevation-2);
+
+  /* 遮罩层【JICH-334 补充】：不能从 canvas 派生，浅色下压不下去 */
+  --color-scrim: rgb(15 23 42 / 0.45);
+
   /* 动效 */
   --duration-fast: 120ms;
   --duration-normal: 200ms;
@@ -149,10 +163,12 @@
     --color-destructive: #dc2626;
     --color-ring: #4f46e5;
 
+    --color-scrim: rgb(15 23 42 / 0.45);
+
     /* 浅色阴影：柔和、低透明度（沿用现有值） */
-    --shadow-1: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
-    --shadow-2: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 2px 4px -2px rgb(15 23 42 / 0.05);
-    --shadow-3: 0 16px 48px rgb(15 23 42 / 0.12);
+    --elevation-1: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+    --elevation-2: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+    --elevation-3: 0 16px 48px rgb(15 23 42 / 0.12);
   }
 
   .dark {
@@ -210,10 +226,12 @@
     --color-destructive: #ef4444;
     --color-ring: #6366f1;
 
+    --color-scrim: rgb(0 0 0 / 0.6);
+
     /* 暗色阴影必须重定义：纯黑阴影在暗色下不可见 */
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-2: 0 4px 16px rgb(0 0 0 / 0.45);
-    --shadow-3: 0 16px 48px rgb(0 0 0 / 0.6);
+    --elevation-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --elevation-2: 0 4px 16px rgb(0 0 0 / 0.45);
+    --elevation-3: 0 16px 48px rgb(0 0 0 / 0.6);
   }
 }
 

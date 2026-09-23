@@ -74,6 +74,16 @@ function defaultSortValue<T>(row: T, key: string): string | number {
   return String(raw ?? '');
 }
 
+/**
+ * 计算点击某列后的下一个排序状态；纯函数，便于单测。
+ * 同列点击在升/降之间翻转，换列则从升序开始（业界通例）。
+ */
+export function toggleSort(current: SortState | undefined, key: string): SortState {
+  const direction: SortDirection =
+    current?.key === key && current.direction === 'asc' ? 'desc' : 'asc';
+  return { key, direction };
+}
+
 /** 按列定义排序；纯函数，便于单测。 */
 export function sortRows<T>(rows: T[], columns: ColumnDef<T>[], sort?: SortState): T[] {
   if (!sort) return rows;
@@ -200,9 +210,7 @@ export function DataTable<T>({
 
   const handleSort = (column: ColumnDef<T>) => {
     if (!column.sortable || !sortingEnabled) return;
-    const nextDirection: SortDirection =
-      activeSort?.key === column.key && activeSort.direction === 'asc' ? 'desc' : 'asc';
-    applySort({ key: column.key, direction: nextDirection });
+    applySort(toggleSort(activeSort, column.key));
   };
 
   const alignClass = (align?: ColumnDef<T>['align']) =>

@@ -32,8 +32,9 @@ export const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      // 遮罩用 color-mix 从画布令牌派生，双主题下都压得下去
-      'fixed inset-0 z-50 bg-[color-mix(in_oklab,var(--color-canvas)_72%,transparent)] backdrop-blur-[1px]',
+      // 用专用 scrim 令牌而非从 canvas 派生：浅色下 canvas 本身是浅色，
+      // 派生出来的遮罩压不下去，弹窗与页面分不开。
+      'fixed inset-0 z-50 bg-scrim backdrop-blur-[1px]',
       className,
     )}
     {...props}

@@ -55,10 +55,14 @@ export function Tabs({ items, value, onChange, className, 'aria-label': ariaLabe
     else return;
 
     e.preventDefault();
-    onChange(enabled[next].value);
-    // 焦点跟随选中项
-    const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    buttons?.[next]?.focus();
+    const target = enabled[next];
+    onChange(target.value);
+    // 焦点按 id 定位到目标 tab，而非按序号索引全部按钮：
+    // 序号来自「已启用」子集，若与全部按钮的下标混用，
+    // 中间存在禁用项时会把焦点丢到禁用按钮上（不可聚焦）。
+    listRef.current
+      ?.querySelector<HTMLButtonElement>(`#tab-${CSS.escape(target.value)}`)
+      ?.focus();
   };
 
   return (
