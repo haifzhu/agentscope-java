@@ -29,7 +29,7 @@ export const KANBAN_COLUMNS = ["todo", "open", "in_progress", "in_review", "bloc
 export const ISSUE_STATUS_LABELS: Record<string, string> = {
   backlog: "待办",
   todo: "待办",
-  open: "进行中",
+  open: "已开放",
   in_progress: "进行中",
   in_review: "评审中",
   blocked: "被阻塞",

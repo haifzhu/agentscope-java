@@ -94,19 +94,19 @@ export function WorkPanelHeader({
 }
 
 const statusMeta: Record<string, { label: string; tone: "default" | "success" | "warning" | "danger" | "info" }> = {
-  backlog: { label: "Backlog", tone: "default" },
-  todo: { label: "Todo", tone: "default" },
-  open: { label: "Open", tone: "info" },
-  in_progress: { label: "In progress", tone: "info" },
-  in_review: { label: "In review", tone: "warning" },
-  blocked: { label: "Blocked", tone: "danger" },
-  done: { label: "Done", tone: "success" },
-  completed: { label: "Completed", tone: "success" },
-  approved: { label: "Approved", tone: "success" },
-  rejected: { label: "Rejected", tone: "danger" },
-  failed: { label: "Failed", tone: "danger" },
-  cancelled: { label: "Cancelled", tone: "default" },
-  pending: { label: "Pending", tone: "warning" },
+  backlog: { label: "待办", tone: "default" },
+  todo: { label: "待办", tone: "default" },
+  open: { label: "已开放", tone: "info" },
+  in_progress: { label: "进行中", tone: "info" },
+  in_review: { label: "评审中", tone: "warning" },
+  blocked: { label: "被阻塞", tone: "danger" },
+  done: { label: "已完成", tone: "success" },
+  completed: { label: "已完成", tone: "success" },
+  approved: { label: "已批准", tone: "success" },
+  rejected: { label: "已驳回", tone: "danger" },
+  failed: { label: "失败", tone: "danger" },
+  cancelled: { label: "已取消", tone: "default" },
+  pending: { label: "待处理", tone: "warning" },
 };
 
 export function WorkStatusBadge({ status, className }: { status: string; className?: string }) {
@@ -115,7 +115,7 @@ export function WorkStatusBadge({ status, className }: { status: string; classNa
     tone: "default" as const,
   };
   return (
-    <Badge tone={meta.tone} className={cn("capitalize", className)}>
+    <Badge tone={meta.tone} className={className}>
       {meta.label}
     </Badge>
   );
