@@ -16,6 +16,7 @@
 
 import { ResourceConsumers } from '../components/ResourceConsumers';
 import React, { useEffect, useState } from 'react';
+import { Archive, KeyRound, Lock, Plus, Trash2 } from 'lucide-react';
 import {
   Vault,
   VaultCredential,
@@ -30,52 +31,29 @@ import {
   updateVault,
   validateCredential,
 } from '../api/vaults';
+import { AsyncState } from '../components/ui/async-state';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Page, PageHeader } from '../components/Page';
+import { cn } from '../lib/utils';
 
-const S: Record<string, React.CSSProperties> = {
-  root: { padding: '40px 44px', maxWidth: 1200 },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  title: { margin: 0, fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em' },
-  blurb: { margin: '0 0 24px', color: '#64748b', fontSize: '1rem', lineHeight: 1.6, maxWidth: 760 },
-  primaryBtn: {
-    display: 'inline-flex', alignItems: 'center', gap: 8,
-    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)',
-    color: '#ffffff', border: 'none',
-    borderRadius: 10, padding: '11px 20px', fontSize: '0.95rem', fontWeight: 600,
-    cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
-  },
-  card: {
-    background: '#ffffff', border: '1px solid #e2e8f0',
-    borderRadius: 14, padding: '20px 22px', marginBottom: 18,
-    boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
-  },
-  rowBtn: {
-    padding: '7px 14px', fontSize: '0.84rem', fontWeight: 500, borderRadius: 8, cursor: 'pointer',
-    border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569',
-  },
-  danger: { color: '#dc2626', borderColor: '#fca5a5' },
-  formField: { display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: 6, fontWeight: 500 },
-  input: {
-    width: '100%', boxSizing: 'border-box', padding: '10px 12px',
-    background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 8,
-    color: '#0f172a', fontSize: '0.92rem',
-  },
-  err: { color: '#dc2626', fontSize: '0.95rem', marginBottom: 16 },
-  notice: {
-    padding: '12px 16px', borderRadius: 10, marginBottom: 16,
-    background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontSize: '0.88rem',
-  },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' },
-  th: { textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 600 },
-  td: { padding: '10px', borderBottom: '1px solid #f1f5f9', color: '#334155' },
-  modal: {
-    position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-  },
-  modalBody: {
-    background: '#ffffff', borderRadius: 14, padding: '28px 32px',
-    width: '100%', maxWidth: 480, boxShadow: '0 20px 50px rgba(15,23,42,0.2)',
-  },
+const selectClass =
+  'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
+
+const CRED_TYPE_LABEL: Record<string, string> = {
+  static_bearer: 'MCP Bearer 令牌',
+  mcp_oauth: 'MCP OAuth 令牌（可选刷新）',
+  environment_variable: '显式环境变量占位',
+  api_key: '通用密钥（仅存储）',
 };
 
 export default function VaultsPage() {
@@ -99,7 +77,7 @@ export default function VaultsPage() {
     try {
       setVaults(await listVaults());
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load');
+      setErr(e instanceof Error ? e.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -111,11 +89,13 @@ export default function VaultsPage() {
     try {
       setCredentials(await listCredentials(vault.id));
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load credentials');
+      setErr(e instanceof Error ? e.message : '凭据加载失败');
     }
   }
 
-  useEffect(() => { void refreshVaults(); }, []);
+  useEffect(() => {
+    void refreshVaults();
+  }, []);
 
   async function handleCreateVault(e: React.FormEvent) {
     e.preventDefault();
@@ -128,14 +108,14 @@ export default function VaultsPage() {
       await refreshVaults();
       await loadCredentials(created);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Create failed');
+      setErr(e instanceof Error ? e.message : '创建失败');
     } finally {
       setBusyId(null);
     }
   }
 
   async function handleRenameVault(v: Vault) {
-    const next = window.prompt('Rename vault', v.displayName);
+    const next = window.prompt('重命名密钥库', v.displayName);
     if (next == null || !next.trim() || next.trim() === v.displayName) return;
     setBusyId(v.id);
     try {
@@ -145,35 +125,41 @@ export default function VaultsPage() {
         setSelected({ ...v, displayName: next.trim() });
       }
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Rename failed');
+      setErr(e instanceof Error ? e.message : '重命名失败');
     } finally {
       setBusyId(null);
     }
   }
 
   async function handleArchiveVault(id: string) {
-    if (!confirm('Archive this vault? It will no longer inject credentials into sessions.')) return;
+    if (!confirm('确认归档该密钥库？归档后不再向会话注入凭据。')) return;
     setBusyId(id);
     try {
       await archiveVault(id);
-      if (selected?.id === id) { setSelected(null); setCredentials([]); }
+      if (selected?.id === id) {
+        setSelected(null);
+        setCredentials([]);
+      }
       await refreshVaults();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Archive failed');
+      setErr(e instanceof Error ? e.message : '归档失败');
     } finally {
       setBusyId(null);
     }
   }
 
   async function handleDeleteVault(id: string) {
-    if (!confirm('Delete this vault and all credentials?')) return;
+    if (!confirm('确认删除该密钥库及其全部凭据？此操作不可恢复。')) return;
     setBusyId(id);
     try {
       await deleteVault(id);
-      if (selected?.id === id) { setSelected(null); setCredentials([]); }
+      if (selected?.id === id) {
+        setSelected(null);
+        setCredentials([]);
+      }
       await refreshVaults();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Delete failed');
+      setErr(e instanceof Error ? e.message : '删除失败');
     } finally {
       setBusyId(null);
     }
@@ -184,10 +170,12 @@ export default function VaultsPage() {
     setBusyId(credentialId);
     try {
       const result = await validateCredential(selected.id, credentialId);
-      const detail = Object.entries(result.checks).map(([k, v]) => `${k}=${v}`).join(', ');
-      window.alert(result.ok ? `Valid (${detail})` : `Invalid (${detail})`);
+      const detail = Object.entries(result.checks)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('、');
+      window.alert(result.ok ? `有效（${detail}）` : `无效（${detail}）`);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Validate failed');
+      setErr(e instanceof Error ? e.message : '校验失败');
     } finally {
       setBusyId(null);
     }
@@ -195,14 +183,14 @@ export default function VaultsPage() {
 
   async function handleRotateSecret(credentialId: string) {
     if (!selected) return;
-    const secret = window.prompt('Enter new secret (write-only; never shown again)');
+    const secret = window.prompt('输入新的密钥值（只写不读，保存后不再显示）');
     if (secret == null || !secret) return;
     setBusyId(credentialId);
     try {
       await updateCredential(selected.id, credentialId, { secret });
       await loadCredentials(selected);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Update failed');
+      setErr(e instanceof Error ? e.message : '更新失败');
     } finally {
       setBusyId(null);
     }
@@ -213,11 +201,13 @@ export default function VaultsPage() {
     if (!selected || !credLabel.trim() || !credSecret.trim()) return;
     setBusyId('cred');
     try {
-      if (!credTarget.trim()) throw new Error('Enter a connection name, endpoint URL, or environment variable name.');
-      if (credType === 'environment_variable' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(credTarget.trim())) throw new Error('Enter a valid environment variable name.');
+      if (!credTarget.trim()) throw new Error('请填写连接名称、端点 URL 或环境变量名。');
+      if (credType === 'environment_variable' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(credTarget.trim()))
+        throw new Error('请填写合法的环境变量名。');
       if (credType === 'mcp_oauth') {
-        const value = JSON.parse(credSecret);
-        if (typeof value.access_token !== 'string' || !value.access_token) throw new Error('OAuth credentials require an access_token.');
+        const value = JSON.parse(credSecret) as { access_token?: string };
+        if (typeof value.access_token !== 'string' || !value.access_token)
+          throw new Error('OAuth 凭据必须包含 access_token。');
       }
       await addCredential(selected.id, {
         type: credType,
@@ -231,171 +221,236 @@ export default function VaultsPage() {
       setCredSecret('');
       await loadCredentials(selected);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Add failed');
+      setErr(e instanceof Error ? e.message : '添加失败');
     } finally {
       setBusyId(null);
     }
   }
 
   async function handleDeleteCredential(credentialId: string) {
-    if (!selected || !confirm('Delete this credential?')) return;
+    if (!selected || !confirm('确认删除该凭据？')) return;
     setBusyId(credentialId);
     try {
       await deleteCredential(selected.id, credentialId);
       await loadCredentials(selected);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Delete failed');
+      setErr(e instanceof Error ? e.message : '删除失败');
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <div style={S.header}>
-        <h1 style={S.title}>Vaults</h1>
-        <button type="button" style={S.primaryBtn} onClick={() => setCreatingVault(true)}>＋ New vault</button>
+    <Page className="max-w-[1200px]">
+      <PageHeader
+        title="密钥库"
+        description="管理智能体通过密钥库绑定可使用的凭据。每条凭据的目标标识其服务的连接或环境变量。"
+        actions={
+          <Button onClick={() => setCreatingVault(true)}>
+            <Plus className="h-4 w-4" /> 新建密钥库
+          </Button>
+        }
+      />
+      <div className="mb-5 flex items-start gap-2 rounded-xl border border-warning-soft bg-warning-soft p-4 text-sm leading-6 text-warning-text">
+        <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+        密钥值为只写——添加后仅显示元数据（类型、标签、目标）。
       </div>
-      <p style={S.blurb}>
-        Manage credentials that Agents can use through their configured Vault bindings. Each credential’s target identifies the connection or environment variable it serves.
-      </p>
-      <div style={S.notice}>🔒 Secret values are write-only — only metadata (type, label, target) is shown after add.</div>
-      {err && <div style={S.err}>{err}</div>}
-      {loading && <div style={{ color: '#64748b' }}>Loading…</div>}
+      <AsyncState
+        status={loading ? 'loading' : err ? 'error' : vaults.length ? 'ready' : 'empty'}
+        resource="密钥库"
+        errorDescription={err ?? undefined}
+        onRetry={() => void refreshVaults()}
+        emptyDescription="尚未创建密钥库。"
+      >
+        <div className="grid gap-6 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
+          <div className="space-y-3">
+            {vaults.map((v) => (
+              <Card
+                key={v.id}
+                className={cn(
+                  'cursor-pointer space-y-2 p-4',
+                  selected?.id === v.id && 'border-primary bg-primary-soft',
+                )}
+                onClick={() => void loadCredentials(v)}
+              >
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-text-3" />
+                  <span className="flex-1 truncate text-sm font-semibold">{v.displayName}</span>
+                </div>
+                <div className="font-mono text-xs text-text-3">{v.id}</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleRenameVault(v);
+                    }}
+                  >
+                    重命名
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleArchiveVault(v.id);
+                    }}
+                  >
+                    <Archive className="h-3.5 w-3.5" /> 归档
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-danger-text"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleDeleteVault(v.id);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> 删除
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
-        <div>
-          {vaults.map(v => (
-            <div
-              key={v.id}
-              style={{
-                ...S.card,
-                cursor: 'pointer',
-                borderColor: selected?.id === v.id ? '#c7d2fe' : '#e2e8f0',
-                background: selected?.id === v.id ? '#eef2ff' : '#ffffff',
-              }}
-              onClick={() => loadCredentials(v)}
-            >
-              <div style={{ fontWeight: 600 }}>{v.displayName}</div>
-              <div style={{ fontSize: '0.76rem', color: '#94a3b8', fontFamily: 'monospace' }}>{v.id}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  style={S.rowBtn}
-                  onClick={e => { e.stopPropagation(); void handleRenameVault(v); }}
-                >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  style={S.rowBtn}
-                  onClick={e => { e.stopPropagation(); void handleArchiveVault(v.id); }}
-                >
-                  Archive
-                </button>
-                <button
-                  type="button"
-                  style={{ ...S.rowBtn, ...S.danger }}
-                  onClick={e => { e.stopPropagation(); void handleDeleteVault(v.id); }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          {!loading && vaults.length === 0 && (
-            <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>No vaults yet.</div>
-          )}
-        </div>
-
-        <div>
-          {selected ? (
-            <div style={S.card}>
-              <ResourceConsumers kind="vault" id={selected.id} />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{selected.displayName} — credentials</h2>
-                <button type="button" style={S.rowBtn} onClick={() => setAddingCred(true)}>＋ Add credential</button>
-              </div>
-              <table style={S.table}>
-                <thead>
-                  <tr>
-                    <th style={S.th}>Label</th>
-                    <th style={S.th}>Type</th>
-                    <th style={S.th}>Target</th>
-                    <th style={S.th}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {credentials.map(c => (
-                    <tr key={c.id}>
-                      <td style={S.td}>{c.label}</td>
-                      <td style={S.td}><code>{c.type}</code></td>
-                      <td style={S.td}>{c.target || '—'}</td>
-                      <td style={S.td}>
-                        <button type="button" style={S.rowBtn} onClick={() => handleValidateCredential(c.id)}>Validate</button>
-                        {' '}
-                        <button type="button" style={S.rowBtn} onClick={() => handleRotateSecret(c.id)}>Rotate</button>
-                        {' '}
-                        <button type="button" style={{ ...S.rowBtn, ...S.danger }} onClick={() => handleDeleteCredential(c.id)}>Delete</button>
-                      </td>
+          <div>
+            {selected ? (
+              <Card className="p-5">
+                <ResourceConsumers kind="vault" id={selected.id} />
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold">{selected.displayName} · 凭据</h2>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setAddingCred(true)}>
+                    <Plus className="h-3.5 w-3.5" /> 新增凭据
+                  </Button>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-text-3">
+                      <th className="py-2 pr-3 font-medium">标签</th>
+                      <th className="py-2 pr-3 font-medium">类型</th>
+                      <th className="py-2 pr-3 font-medium">目标</th>
+                      <th className="py-2 font-medium">操作</th>
                     </tr>
-                  ))}
-                  {credentials.length === 0 && (
-                    <tr><td colSpan={4} style={{ ...S.td, color: '#94a3b8', fontStyle: 'italic' }}>No credentials in this vault.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div style={{ color: '#94a3b8', padding: '40px 0', textAlign: 'center' }}>Select a vault to manage credentials.</div>
-          )}
-        </div>
-      </div>
-
-      {creatingVault && (
-        <div style={S.modal} onClick={() => setCreatingVault(false)}>
-          <div style={S.modalBody} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 18px', fontSize: '1.2rem' }}>New vault</h2>
-            <form onSubmit={handleCreateVault}>
-              <label style={S.formField}>Display name</label>
-              <input style={{ ...S.input, marginBottom: 20 }} value={vaultName} onChange={e => setVaultName(e.target.value)} autoFocus />
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button type="button" style={S.rowBtn} onClick={() => setCreatingVault(false)}>Cancel</button>
-                <button type="submit" style={S.primaryBtn} disabled={busyId === 'create'}>Create</button>
+                  </thead>
+                  <tbody>
+                    {credentials.map((c) => (
+                      <tr key={c.id} className="border-b border-border">
+                        <td className="py-2.5 pr-3">{c.label}</td>
+                        <td className="py-2.5 pr-3"><code>{c.type}</code></td>
+                        <td className="py-2.5 pr-3">{c.target || '—'}</td>
+                        <td className="space-x-2 py-2.5 whitespace-nowrap">
+                          <Button type="button" variant="outline" size="sm" onClick={() => void handleValidateCredential(c.id)}>
+                            校验
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => void handleRotateSecret(c.id)}>
+                            轮换
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" className="text-danger-text" onClick={() => void handleDeleteCredential(c.id)}>
+                            <Trash2 className="h-3.5 w-3.5" /> 删除
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {credentials.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-4 text-center text-text-3">
+                          该密钥库暂无凭据。
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </Card>
+            ) : (
+              <div className="py-16 text-center text-text-3">
+                选择左侧密钥库管理其凭据。
               </div>
-            </form>
+            )}
           </div>
         </div>
-      )}
+      </AsyncState>
 
-      {addingCred && selected && (
-        <div style={S.modal} onClick={() => setAddingCred(false)}>
-          <div style={S.modalBody} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 18px', fontSize: '1.2rem' }}>Add credential</h2>
-            <form onSubmit={handleAddCredential}>
-              <label style={S.formField}>Type</label>
-              <select style={{ ...S.input, marginBottom: 14 }} value={credType} onChange={e => setCredType(e.target.value)}>
-                <option value="static_bearer">MCP bearer token</option>
-                <option value="mcp_oauth">MCP OAuth token with optional refresh</option>
-                <option value="environment_variable">Explicit environment placeholder</option>
-                <option value="api_key">Generic secret (storage only)</option>
-              </select>
-              <label style={S.formField}>Label</label>
-              <input style={{ ...S.input, marginBottom: 14 }} value={credLabel} onChange={e => setCredLabel(e.target.value)} autoFocus />
-              <label style={S.formField}>Target</label>
-              <input style={{ ...S.input, marginBottom: 14 }} value={credTarget} onChange={e => setCredTarget(e.target.value)} placeholder={credType === 'environment_variable' ? 'CRM_TOKEN' : 'crm or https://crm.example/mcp'} />
-              <p style={{ fontSize: 12, color: '#64748b' }}>{credType === 'environment_variable' ? 'Only explicitly referenced ${VARIABLE} values are substituted into MCP headers, environment or query parameters.' : 'Bearer and OAuth credentials match a connection name or its complete endpoint URL, including the path.'}</p>
-              {credType === 'mcp_oauth' && <p style={{ fontSize: 12, color: '#64748b' }}>Enter JSON with access_token and optional expires_at. Automatic renewal also requires refresh.token_endpoint, client_id and refresh_token. Client authentication can be configured under refresh.token_endpoint_auth. Refresh credentials stay in the control plane.</p>}
-              <label style={S.formField}>Secret (write-only)</label>
-              <input style={{ ...S.input, marginBottom: 20 }} type="password" value={credSecret} onChange={e => setCredSecret(e.target.value)} />
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button type="button" style={S.rowBtn} onClick={() => setAddingCred(false)}>Cancel</button>
-                <button type="submit" style={S.primaryBtn} disabled={busyId === 'cred'}>Add</button>
+      <Dialog open={creatingVault} onOpenChange={setCreatingVault}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>新建密钥库</DialogTitle>
+            <DialogDescription>集中存放智能体运行所需的凭据。</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <form onSubmit={handleCreateVault} className="space-y-5">
+              <label className="block space-y-2 text-sm font-medium">
+                显示名称
+                <Input value={vaultName} onChange={(e) => setVaultName(e.target.value)} autoFocus required />
+              </label>
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <Button type="button" variant="ghost" onClick={() => setCreatingVault(false)}>取消</Button>
+                <Button type="submit" disabled={busyId === 'create' || !vaultName.trim()}>创建</Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-    </div>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addingCred && !!selected} onOpenChange={(open) => !open && setAddingCred(false)}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>新增凭据</DialogTitle>
+            <DialogDescription>密钥只写不读；目标决定凭据注入的位置。</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <form onSubmit={handleAddCredential} className="space-y-4">
+              <label className="block space-y-2 text-sm font-medium">
+                类型
+                <select className={selectClass} value={credType} onChange={(e) => setCredType(e.target.value)}>
+                  <option value="static_bearer">MCP Bearer 令牌</option>
+                  <option value="mcp_oauth">MCP OAuth 令牌（可选刷新）</option>
+                  <option value="environment_variable">显式环境变量占位</option>
+                  <option value="api_key">通用密钥（仅存储）</option>
+                </select>
+              </label>
+              <label className="block space-y-2 text-sm font-medium">
+                标签
+                <Input value={credLabel} onChange={(e) => setCredLabel(e.target.value)} autoFocus required />
+              </label>
+              <label className="block space-y-2 text-sm font-medium">
+                目标
+                <Input
+                  value={credTarget}
+                  onChange={(e) => setCredTarget(e.target.value)}
+                  placeholder={credType === 'environment_variable' ? 'CRM_TOKEN' : 'crm 或 https://crm.example/mcp'}
+                  required
+                />
+              </label>
+              <p className="text-xs leading-5 text-text-3">
+                {credType === 'environment_variable'
+                  ? '只有被显式引用的 ${VARIABLE} 值才会替换进 MCP 请求头、环境变量或查询参数。'
+                  : 'Bearer 与 OAuth 凭据按连接名或完整端点 URL（含路径）匹配。'}
+              </p>
+              {credType === 'mcp_oauth' && (
+                <p className="text-xs leading-5 text-text-3">
+                  请输入包含 access_token 与可选 expires_at 的
+                  JSON。自动续期还需 refresh.token_endpoint、client_id 与
+                  refresh_token；客户端认证可在 refresh.token_endpoint_auth
+                  中配置。刷新凭据保留在控制面。
+                </p>
+              )}
+              <label className="block space-y-2 text-sm font-medium">
+                密钥（只写）
+                <Input type="password" value={credSecret} onChange={(e) => setCredSecret(e.target.value)} required />
+              </label>
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <Button type="button" variant="ghost" onClick={() => setAddingCred(false)}>取消</Button>
+                <Button type="submit" disabled={busyId === 'cred'}>添加</Button>
+              </div>
+            </form>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+    </Page>
   );
 }

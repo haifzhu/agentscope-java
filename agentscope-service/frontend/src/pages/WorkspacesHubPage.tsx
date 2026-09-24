@@ -40,7 +40,7 @@ export default function WorkspacesHubPage() {
       setItems(await listWorkspaces());
       setErr(null);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load');
+      setErr(e instanceof Error ? e.message : '加载失败');
     }
   }
 
@@ -57,7 +57,7 @@ export default function WorkspacesHubPage() {
       setCreateOpen(false);
       navigate(scope.scopedPath(`/agent-center/workspaces/${encodeURIComponent(ws.id)}`));
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Create failed');
+      setErr(e instanceof Error ? e.message : '创建失败');
     } finally {
       setCreating(false);
     }
@@ -66,55 +66,55 @@ export default function WorkspacesHubPage() {
   return (
     <Page className="max-w-[1200px]">
       <PageHeader
-        title="Workspaces"
-        description="Author skills, tools, subagents, and AGENTS.md in a reusable workspace, then link Agents to it."
-        actions={<Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />New workspace</Button>}
+        title="工作空间"
+        description="在可复用的工作空间中编写技能、工具、子智能体与 AGENTS.md，再将智能体绑定到它。"
+        actions={<Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />新建工作空间</Button>}
       />
-      {err && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>}
+      {err && <div className="rounded-xl border border-danger-soft bg-danger-soft px-4 py-3 text-sm text-danger-text">{err}</div>}
       {items.length ? (
         <Card className="overflow-hidden">
-          <div className="border-b border-slate-100 px-5 py-3 text-xs text-slate-500">{items.length} workspace{items.length === 1 ? '' : 's'}</div>
-          <div className="divide-y divide-slate-100">
+          <div className="border-b border-border px-5 py-3 text-xs text-text-3">共 {items.length} 个工作空间</div>
+          <div className="divide-y divide-border">
             {items.map((workspace) => (
-              <div key={workspace.id} className="group flex items-center gap-3 px-5 py-4 hover:bg-slate-50/70">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500"><FolderOpen className="h-4 w-4" /></span>
+              <div key={workspace.id} className="group flex items-center gap-3 px-5 py-4 hover:bg-hover">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-text-3"><FolderOpen className="h-4 w-4" /></span>
                 <button className="min-w-0 flex-1 text-left" onClick={() => navigate(scope.scopedPath(`/agent-center/workspaces/${encodeURIComponent(workspace.id)}`))}>
-                  <div className="truncate text-sm font-semibold text-slate-900 group-hover:text-indigo-700">{workspace.name}</div>
-                  <div className="mt-1 truncate text-xs text-slate-500">
+                  <div className="truncate text-sm font-semibold text-text group-hover:text-primary">{workspace.name}</div>
+                  <div className="mt-1 truncate text-xs text-text-3">
                     {workspace.description || workspace.id} · v{workspace.version}{workspace.agentsMdExists ? ' · AGENTS.md' : ''} · {workspace.skillCount ?? 0} skills · {workspace.subagentCount ?? 0} subagents
                   </div>
                 </button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-slate-400 hover:text-red-600"
-                  aria-label={`Delete ${workspace.name}`}
+                  className="text-text-3 hover:text-danger-text"
+                  aria-label={`删除 ${workspace.name}`}
                   onClick={async () => {
-                    if (!confirm(`Delete workspace ${workspace.name}?`)) return;
+                    if (!confirm(`确认删除工作空间 ${workspace.name}？`)) return;
                     try {
                       await deleteWorkspace(workspace.id);
                       await reload();
                     } catch (cause: unknown) {
-                      setErr(cause instanceof Error ? cause.message : 'Delete failed');
+                      setErr(cause instanceof Error ? cause.message : '删除失败');
                     }
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                <ChevronRight className="h-4 w-4 text-slate-300" />
+                <ChevronRight className="h-4 w-4 text-text-3" />
               </div>
             ))}
           </div>
         </Card>
-      ) : !err && <EmptyState title="No workspaces yet" description="Create a workspace to share tools, skills, and operating instructions across Agents." action={<Button size="sm" onClick={() => setCreateOpen(true)}>Create workspace</Button>} />}
+      ) : !err && <EmptyState title="暂无工作空间" description="创建工作空间，在多个智能体间共享工具、技能与操作说明。" action={<Button size="sm" onClick={() => setCreateOpen(true)}>创建工作空间</Button>} />}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent size="md">
-          <DialogHeader><DialogTitle>Create workspace</DialogTitle><DialogDescription>Start a reusable home for Agent tools, skills, and instructions.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>新建工作空间</DialogTitle><DialogDescription>为智能体的工具、技能与操作说明建一个可复用的家。</DialogDescription></DialogHeader>
           <DialogBody>
             <form onSubmit={(event) => { event.preventDefault(); void onCreate(); }} className="space-y-5">
-              <label className="block space-y-2 text-sm font-medium text-slate-700">Name<Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Research workspace" autoFocus required /></label>
-              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4"><Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button><Button type="submit" disabled={creating || !name.trim()}>{creating ? 'Creating…' : 'Create workspace'}</Button></div>
+              <label className="block space-y-2 text-sm font-medium text-text-2">名称<Input value={name} onChange={(event) => setName(event.target.value)} placeholder="研究工作空间" autoFocus required /></label>
+              <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>取消</Button><Button type="submit" disabled={creating || !name.trim()}>{creating ? '创建中…' : '创建工作空间'}</Button></div>
             </form>
           </DialogBody>
         </DialogContent>

@@ -17,6 +17,7 @@
 import WorkspacePublications from '../components/WorkspacePublications';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 import { useControlPlaneScope } from '../app/ScopeContext';
 import {
   browseMarketplaceSkills,
@@ -49,14 +50,22 @@ import McpConnectionsEditor from '../components/McpConnectionsEditor';
 import { AgentToolset, McpServerSpec } from '../api/agents';
 import type { WorkspaceSkillInfo } from '../api/skills';
 import type { SubagentInfo } from '../api/subagents';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Input, Textarea } from '../components/ui/input';
+import { Page, PageHeader } from '../components/Page';
+import { cn } from '../lib/utils';
 
 type Tab = 'agentsmd' | 'skills' | 'tools' | 'subagents';
 
-const card: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  padding: 16,
+const selectClass =
+  'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
+
+const TAB_LABEL: Record<Tab, string> = {
+  agentsmd: 'AGENTS.md',
+  skills: '技能',
+  tools: '工具',
+  subagents: '子智能体',
 };
 
 export default function WorkspaceDetailPage() {
@@ -155,7 +164,7 @@ export default function WorkspaceDetailPage() {
       await reloadMeta();
       setErr(null);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+      setErr(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSaving(false);
     }
@@ -216,119 +225,103 @@ export default function WorkspaceDetailPage() {
   }
 
   return (
-    <div className="console-page-legacy" style={{ padding: '36px 40px', maxWidth: 1040 }}>
-      <button
+    <Page className="max-w-[1040px]">
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => navigate(scope.scopedPath('/agent-center/workspaces'))}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: '#6366f1',
-          cursor: 'pointer',
-          marginBottom: 12,
-          padding: 0,
-          fontWeight: 600,
-        }}
       >
-        ← Workspaces
-      </button>
-      <h1 style={{ margin: '0 0 6px', fontSize: '1.5rem', fontWeight: 700 }}>
-        {ws?.name || id}
-      </h1>
-      <p style={{ margin: '0 0 8px', color: '#64748b' }}>
-        {ws?.description || 'Share instructions, skills, tools and subagents with the Agents linked to this Workspace.'}
-      </p>
-      <div style={{ color: '#94a3b8', fontSize: '0.82rem', marginBottom: 18 }}>
-        v{ws?.version ?? '?'} · skills {ws?.skillCount ?? skills.length} · subagents{' '}
+        <ArrowLeft className="h-4 w-4" /> 工作空间
+      </Button>
+      <PageHeader
+        title={ws?.name || id}
+        description={ws?.description || '与绑定到该工作空间的智能体共享操作说明、技能、工具与子智能体。'}
+      />
+      <div className="text-xs text-text-3">
+        v{ws?.version ?? '?'} · 技能 {ws?.skillCount ?? skills.length} · 子智能体{' '}
         {ws?.subagentCount ?? subagents.length}
         {ws?.agentsMdExists ? ' · AGENTS.md' : ''}
       </div>
       <WorkspacePublications id={id} />
-      {err && <div style={{ color: '#dc2626', marginBottom: 12 }}>{err}</div>}
+      {err && (
+        <div role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger-text">
+          {err}
+        </div>
+      )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-        {(
-          [
-            ['agentsmd', 'AGENTS.md'],
-            ['skills', 'Skills'],
-            ['tools', 'Tools'],
-            ['subagents', 'Subagents'],
-          ] as const
-        ).map(([k, label]) => (
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="工作空间分区">
+        {(Object.keys(TAB_LABEL) as Tab[]).map(k => (
           <button
             key={k}
+            role="tab"
+            aria-selected={tab === k}
             onClick={() => {
               setTab(k);
               setSearchParams(previous => { const next = new URLSearchParams(previous); next.set('tab', k); return next; }, { replace: true });
             }}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              cursor: 'pointer',
-              border: tab === k ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
-              background: tab === k ? '#eef2ff' : '#fff',
-              fontWeight: 600,
-              color: '#0f172a',
-            }}
+            className={cn(
+              'rounded-lg border px-3.5 py-2 text-sm font-medium',
+              tab === k
+                ? 'border-primary bg-primary-soft text-primary-text'
+                : 'border-border bg-surface text-text-2 hover:text-text',
+            )}
           >
-            {label}
+            {TAB_LABEL[k]}
           </button>
         ))}
       </div>
 
       {tab === 'agentsmd' && (
-        <div>
-          <textarea
+        <div className="space-y-3">
+          <Textarea
             value={agentsMd}
             onChange={e => setAgentsMd(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: 320,
-              boxSizing: 'border-box',
-              padding: 14,
-              borderRadius: 10,
-              border: '1px solid #cbd5e1',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontSize: '0.9rem',
-            }}
+            className="min-h-[320px] font-mono text-sm"
+            aria-label="AGENTS.md 内容"
           />
-          <button
-            onClick={saveAgentsMd}
-            disabled={saving}
-            style={{
-              marginTop: 12,
-              padding: '10px 16px',
-              border: 'none',
-              borderRadius: 8,
-              background: '#6366f1',
-              color: '#fff',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Save AGENTS.md
-          </button>
+          <Button onClick={saveAgentsMd} disabled={saving}>
+            <Save className="h-4 w-4" /> 保存 AGENTS.md
+          </Button>
         </div>
       )}
 
-      {tab === 'skills' && <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Skills navigation">
-        {([['installed', 'Installed skills'], ['browse', 'Install from marketplace'], ['sources', 'Manage sources']] as const).map(([key, label]) => <button key={key} className={`rounded-lg border border-border px-3 py-2 text-sm ${skillView === key ? 'bg-indigo-50 border-indigo-200' : 'bg-white'}`} onClick={() => setSkillView(key)}>{label}</button>)}
-        <p className="w-full text-sm text-muted-foreground">Create or install skills in this draft, then publish a revision and update the Agent binding to use them.</p>
-      </div>}
+      {tab === 'skills' && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="技能导航">
+          {([['installed', '已安装技能'], ['browse', '从市场安装'], ['sources', '管理市场源']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              className={cn(
+                'rounded-lg border border-border px-3 py-2 text-sm',
+                skillView === key
+                  ? 'border-primary bg-primary-soft font-medium text-primary-text'
+                  : 'bg-surface text-text-2 hover:text-text',
+              )}
+              onClick={() => setSkillView(key)}
+            >
+              {label}
+            </button>
+          ))}
+          <p className="w-full text-sm text-text-3">
+            在草稿中创建或安装技能，发布修订并更新智能体绑定后即可使用。
+          </p>
+        </div>
+      )}
       {tab === 'skills' && skillView === 'installed' && (
-        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]" style={{ minHeight: 420 }}>
-          <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: 12, borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 8 }}>
-              <input
+        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <Card className="overflow-hidden p-0">
+            <div className="flex gap-2 border-b border-border p-3">
+              <Input
                 value={newSkillName}
                 onChange={e => setNewSkillName(e.target.value)}
                 placeholder="skill-name"
-                style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }}
+                aria-label="新技能名称"
               />
-              <button
+              <Button
+                size="sm"
                 onClick={async () => {
                   const name = newSkillName.trim();
                   if (!name) return;
-                  if (skills.some(skill => skill.dirName === name)) { setErr('A skill with this name already exists. Open it to edit, or choose another name.'); return; }
+                  if (skills.some(skill => skill.dirName === name)) { setErr('同名技能已存在。请打开编辑或换个名称。'); return; }
                   const md = `---\nname: ${name}\ndescription: \n---\n\n# ${name}\n\n`;
                   await putWorkspaceResourceSkill(id, name, md);
                   setNewSkillName('');
@@ -336,407 +329,312 @@ export default function WorkspaceDetailPage() {
                   await openSkill(name);
                   await reloadMeta();
                 }}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: '#6366f1',
-                  color: '#fff',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
               >
-                New skill
-              </button>
+                新建技能
+              </Button>
             </div>
             {skills.map(sk => (
               <button
                 key={sk.dirName}
-                onClick={() => openSkill(sk.dirName)}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px 14px',
-                  border: 'none',
-                  borderBottom: '1px solid #f1f5f9',
-                  background: selectedSkill === sk.dirName ? '#eef2ff' : '#fff',
-                  cursor: 'pointer',
-                }}
+                onClick={() => void openSkill(sk.dirName)}
+                className={cn(
+                  'block w-full border-b border-border px-3.5 py-3 text-left',
+                  selectedSkill === sk.dirName ? 'bg-primary-soft' : 'bg-surface hover:bg-hover',
+                )}
               >
-                <div style={{ fontWeight: 650 }}>{sk.name}</div>
-                <div className="mt-1 text-xs text-indigo-700">{sk.origin === 'marketplace' ? 'Marketplace' : 'Custom'}{sk.marketplace?.repoLocation ? ` · ${sk.marketplace.repoLocation}` : ''}{sk.marketplace?.version ? ` · ${sk.marketplace.version.slice(0, 12)}` : ''}{sk.modified ? ' · Locally modified' : ''}</div>
-                <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{sk.description || sk.dirName}</div>
+                <div className="text-sm font-semibold">{sk.name}</div>
+                <div className="mt-1 text-xs text-primary-text">
+                  {sk.origin === 'marketplace' ? '市场' : '自定义'}
+                  {sk.marketplace?.repoLocation ? ` · ${sk.marketplace.repoLocation}` : ''}
+                  {sk.marketplace?.version ? ` · ${sk.marketplace.version.slice(0, 12)}` : ''}
+                  {sk.modified ? ' · 本地已修改' : ''}
+                </div>
+                <div className="text-xs text-text-3">{sk.description || sk.dirName}</div>
               </button>
             ))}
             {skills.length === 0 && (
-              <div style={{ padding: 16, color: '#94a3b8', fontSize: '0.85rem' }}>No skills yet.</div>
+              <div className="p-4 text-sm text-text-3">暂无技能。</div>
             )}
-          </div>
-          <div style={card}>
+          </Card>
+          <Card className="p-4">
             {selectedSkill ? (
               <>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                  <strong style={{ flex: 1 }}>{selectedSkill}</strong>
-                  <button
+                <div className="mb-3 flex items-center gap-2">
+                  <strong className="flex-1">{selectedSkill}</strong>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={async () => {
                       await putWorkspaceResourceSkill(id, selectedSkill, skillMd);
                       await reloadSkills();
                       await reloadMeta();
                     }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #c7d2fe',
-                      background: '#eef2ff',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
                   >
-                    Save
-                  </button>
-                  <button
+                    <Save className="h-3.5 w-3.5" /> 保存
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-danger-text"
                     onClick={async () => {
-                      if (!confirm(`Delete skill ${selectedSkill}?`)) return;
+                      if (!confirm(`确认删除技能 ${selectedSkill}？`)) return;
                       await deleteWorkspaceResourceSkill(id, selectedSkill);
                       setSelectedSkill(null);
                       setSkillMd('');
                       await reloadSkills();
                       await reloadMeta();
                     }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #fecaca',
-                      background: '#fef2f2',
-                      color: '#dc2626',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
                   >
-                    Delete
-                  </button>
+                    <Trash2 className="h-3.5 w-3.5" /> 删除
+                  </Button>
                 </div>
-                <textarea
+                <Textarea
                   value={skillMd}
                   onChange={e => setSkillMd(e.target.value)}
-                  style={{
-                    width: '100%',
-                    minHeight: 340,
-                    boxSizing: 'border-box',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 8,
-                    padding: 12,
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    fontSize: '0.85rem',
-                  }}
+                  className="min-h-[340px] border-border font-mono text-sm"
+                  aria-label="技能 Markdown"
                 />
               </>
             ) : (
-              <div style={{ color: '#94a3b8' }}>Select or create a skill.</div>
+              <div className="text-text-3">选择或创建一个技能。</div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
       {tab === 'tools' && (
-        <div style={{ display: 'grid', gap: 16 }}>
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>MCP catalog</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
+        <div className="grid gap-4">
+          <Card className="p-4">
+            <h3 className="mb-3 text-sm font-semibold">MCP 目录</h3>
+            <div className="grid gap-2.5">
               {mcpCatalog.map(entry => (
-                <div key={String(entry.id)} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600 }}>{String(entry.name)}</div>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                <div key={String(entry.id)} className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold">{String(entry.name)}</div>
+                    <div className="text-sm text-text-3">
                       {String(entry.description || '')}
                     </div>
                     {Array.isArray(entry.requiredEnv) && entry.requiredEnv.length > 0 && (
-                      <div style={{ color: '#b45309', fontSize: '0.8rem', marginTop: 4 }}>
-                        Vault env: {(entry.requiredEnv as string[]).join(', ')}
+                      <div className="mt-1 text-xs text-warning-text">
+                        需要密钥库环境变量：{(entry.requiredEnv as string[]).join('、')}
                       </div>
                     )}
                   </div>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="outline"
                     disabled={mcpServers.some(server => server.name === String(entry.id || entry.name))}
                     onClick={() => addMcpFromCatalog(entry)}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #c7d2fe',
-                      background: '#eef2ff',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                    }}
                   >
-                    {mcpServers.some(server => server.name === String(entry.id || entry.name)) ? 'Configured' : 'Configure connection'}
-                  </button>
+                    {mcpServers.some(server => server.name === String(entry.id || entry.name)) ? '已配置' : '配置连接'}
+                  </Button>
                 </div>
               ))}
             </div>
             {mcpServers.length > 0 && (
-              <div style={{ marginTop: 14, color: '#64748b', fontSize: '0.85rem' }}>
-                Active MCP: {mcpServers.map(s => s.name).join(', ')}
+              <div className="mt-3.5 text-sm text-text-3">
+                生效中的 MCP：{mcpServers.map(s => s.name).join('、')}
               </div>
             )}
-          </section>
+          </Card>
           <McpConnectionsEditor catalogDraft={catalogDraft} onDraftConsumed={() => setCatalogDraft(undefined)} servers={mcpServers} tools={tools} onSave={async (servers, nextTools) => {
             await putWorkspaceTools(id, nextTools, servers);
             setMcpServers(servers); setTools(nextTools); await reloadMeta();
           }} />
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>Builtin toolset</h3>
-            <div style={{ display: 'grid', gap: 8 }}>
+          <Card className="p-4">
+            <h3 className="mb-3 text-sm font-semibold">内置工具集</h3>
+            <div className="grid gap-2">
               {catalog.map(t => {
                 const on = enabledSet().has(t.id);
                 return (
-                  <label key={t.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <input type="checkbox" checked={on} onChange={() => toggleTool(t.id)} />
+                  <label key={t.id} className="flex items-start gap-2.5">
+                    <input type="checkbox" checked={on} onChange={() => void toggleTool(t.id)} />
                     <span>
                       <strong>{t.id}</strong>
-                      <span style={{ color: '#94a3b8', marginLeft: 8 }}>{t.group}</span>
-                      <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{t.description}</div>
+                      <span className="ml-2 text-xs text-text-3">{t.group}</span>
+                      <div className="text-sm text-text-3">{t.description}</div>
                     </span>
                   </label>
                 );
               })}
             </div>
-          </section>
+          </Card>
         </div>
       )}
 
       {tab === 'subagents' && (
-        <div style={{ display: 'grid', gap: 14 }}>
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>Add subagent</h3>
-            <div style={{ display: 'grid', gap: 8 }}>
-              <input
-                placeholder="name"
-                value={saName}
-                onChange={e => setSaName(e.target.value)}
-                style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}
-              />
-              <input
-                placeholder="description (required)"
-                value={saDesc}
-                onChange={e => setSaDesc(e.target.value)}
-                style={{ padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}
-              />
-              <textarea
-                placeholder="inline system prompt"
-                value={saBody}
-                onChange={e => setSaBody(e.target.value)}
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: '1px solid #cbd5e1',
-                  minHeight: 100,
-                }}
-              />
-              <button
-                onClick={async () => {
-                  if (!saName.trim() || !saDesc.trim()) {
-                    setErr('Subagent name and description are required');
-                    return;
-                  }
-                  await upsertWorkspaceResourceSubagent(id, saName.trim(), {
-                    description: saDesc.trim(),
-                    inlineBody: saBody,
-                    workspaceMode: 'isolated',
-                  });
-                  setSaName('');
-                  setSaDesc('');
-                  setSaBody('');
-                  await reloadSubagents();
-                  await reloadMeta();
-                  setErr(null);
-                }}
-                style={{
-                  width: 140,
-                  padding: '10px 14px',
-                  border: 'none',
-                  borderRadius: 8,
-                  background: '#6366f1',
-                  color: '#fff',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Save subagent
-              </button>
-            </div>
-          </section>
-          <section style={card}>
+        <div className="grid gap-4">
+          <Card className="grid gap-2 p-4">
+            <h3 className="mb-1 text-sm font-semibold">新增子智能体</h3>
+            <Input
+              placeholder="名称"
+              value={saName}
+              onChange={e => setSaName(e.target.value)}
+              aria-label="子智能体名称"
+            />
+            <Input
+              placeholder="描述（必填）"
+              value={saDesc}
+              onChange={e => setSaDesc(e.target.value)}
+              aria-label="子智能体描述"
+            />
+            <Textarea
+              placeholder="内联系统提示词"
+              value={saBody}
+              onChange={e => setSaBody(e.target.value)}
+              className="min-h-[100px]"
+              aria-label="子智能体内联提示词"
+            />
+            <Button
+              className="w-36"
+              onClick={async () => {
+                if (!saName.trim() || !saDesc.trim()) {
+                  setErr('子智能体的名称与描述为必填项');
+                  return;
+                }
+                await upsertWorkspaceResourceSubagent(id, saName.trim(), {
+                  description: saDesc.trim(),
+                  inlineBody: saBody,
+                  workspaceMode: 'isolated',
+                });
+                setSaName('');
+                setSaDesc('');
+                setSaBody('');
+                await reloadSubagents();
+                await reloadMeta();
+                setErr(null);
+              }}
+            >
+              保存子智能体
+            </Button>
+          </Card>
+          <Card className="p-4">
             {subagents.map(sa => (
-              <div
-                key={sa.name}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                  padding: '10px 0',
-                  borderBottom: '1px solid #f1f5f9',
-                }}
-              >
-                <div style={{ flex: 1 }}>
+              <div key={sa.name} className="flex items-center gap-3 border-b border-border py-2.5">
+                <div className="flex-1">
                   <strong>{sa.name}</strong>
-                  <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{sa.description}</div>
+                  <div className="text-sm text-text-3">{sa.description}</div>
                 </div>
-                <button
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-danger-text"
                   onClick={async () => {
-                    if (!confirm(`Delete subagent ${sa.name}?`)) return;
+                    if (!confirm(`确认删除子智能体 ${sa.name}？`)) return;
                     await deleteWorkspaceResourceSubagent(id, sa.name);
                     await reloadSubagents();
                     await reloadMeta();
                   }}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid #fecaca',
-                    background: '#fff',
-                    color: '#dc2626',
-                    cursor: 'pointer',
-                  }}
                 >
-                  Delete
-                </button>
+                  <Trash2 className="h-3.5 w-3.5" /> 删除
+                </Button>
               </div>
             ))}
             {subagents.length === 0 && (
-              <div style={{ color: '#94a3b8' }}>Create a subagent to delegate a focused part of the work. Its runtime must support the selected capabilities.</div>
+              <div className="text-text-3">
+                创建子智能体来分担聚焦的局部工作。其运行时必须支持所选能力。
+              </div>
             )}
-          </section>
+          </Card>
         </div>
       )}
 
       {tab === 'skills' && skillView !== 'installed' && (
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div className="grid gap-4">
           {skillView === 'sources' && <>
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>Register marketplace</h3>
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input
-                  placeholder="Name"
-                  value={mktName}
-                  onChange={e => setMktName(e.target.value)}
-                  style={{ padding: 10, border: '1px solid #cbd5e1', borderRadius: 8, minWidth: 160 }}
-                />
-                <input
-                  placeholder="git remote URL"
-                  value={gitUrl}
-                  onChange={e => setGitUrl(e.target.value)}
-                  style={{
-                    padding: 10,
-                    border: '1px solid #cbd5e1',
-                    borderRadius: 8,
-                    flex: 1,
-                    minWidth: 240,
-                  }}
-                />
-                <button
-                  onClick={async () => {
-                    try {
-                      await createMarketplace({
-                        name: mktName || 'Git skills',
-                        type: 'git',
-                        config: { remoteUrl: gitUrl, branch: 'main', skillsRoot: 'skills' },
-                      });
-                      setMarkets(await listMarketplaces());
-                      setGitUrl('');
-                      setMktName('');
-                      setErr(null);
-                    } catch (e: unknown) {
-                      setErr(e instanceof Error ? e.message : 'Failed');
-                    }
-                  }}
-                  style={{
-                    padding: '10px 14px',
-                    border: 'none',
-                    borderRadius: 8,
-                    background: '#6366f1',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Add git
-                </button>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input
-                  placeholder="nacos serverAddr"
-                  value={nacosAddr}
-                  onChange={e => setNacosAddr(e.target.value)}
-                  style={{ padding: 10, border: '1px solid #cbd5e1', borderRadius: 8, minWidth: 200 }}
-                />
-                <input
-                  placeholder="skillNames comma-separated"
-                  value={nacosSkills}
-                  onChange={e => setNacosSkills(e.target.value)}
-                  style={{
-                    padding: 10,
-                    border: '1px solid #cbd5e1',
-                    borderRadius: 8,
-                    flex: 1,
-                    minWidth: 220,
-                  }}
-                />
-                <button
-                  onClick={async () => {
-                    try {
-                      await createMarketplace({
-                        name: mktName || 'Nacos skills',
-                        type: 'nacos',
-                        config: {
-                          serverAddr: nacosAddr,
-                          skillNames: nacosSkills
-                            .split(',')
-                            .map(s => s.trim())
-                            .filter(Boolean),
-                        },
-                      });
-                      setMarkets(await listMarketplaces());
-                      setNacosAddr('');
-                      setNacosSkills('');
-                      setErr(null);
-                    } catch (e: unknown) {
-                      setErr(e instanceof Error ? e.message : 'Failed');
-                    }
-                  }}
-                  style={{
-                    padding: '10px 14px',
-                    border: '1px solid #c7d2fe',
-                    borderRadius: 8,
-                    background: '#eef2ff',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Add nacos
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>Installed registries</h3>
-            {markets.map(m => (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: '1px solid #f1f5f9',
+          <Card className="grid gap-2.5 p-4">
+            <h3 className="mb-1 text-sm font-semibold">注册市场源</h3>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="名称"
+                value={mktName}
+                onChange={e => setMktName(e.target.value)}
+                className="min-w-[160px]"
+                aria-label="市场名称"
+              />
+              <Input
+                placeholder="git 远程地址"
+                value={gitUrl}
+                onChange={e => setGitUrl(e.target.value)}
+                className="min-w-[240px] flex-1"
+                aria-label="git 远程地址"
+              />
+              <Button
+                onClick={async () => {
+                  try {
+                    await createMarketplace({
+                      name: mktName || 'Git skills',
+                      type: 'git',
+                      config: { remoteUrl: gitUrl, branch: 'main', skillsRoot: 'skills' },
+                    });
+                    setMarkets(await listMarketplaces());
+                    setGitUrl('');
+                    setMktName('');
+                    setErr(null);
+                  } catch (e: unknown) {
+                    setErr(e instanceof Error ? e.message : '操作失败');
+                  }
                 }}
               >
-                <div style={{ flex: 1 }}>
+                添加 Git 源
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="nacos serverAddr"
+                value={nacosAddr}
+                onChange={e => setNacosAddr(e.target.value)}
+                className="min-w-[200px]"
+                aria-label="nacos 地址"
+              />
+              <Input
+                placeholder="skillNames，逗号分隔"
+                value={nacosSkills}
+                onChange={e => setNacosSkills(e.target.value)}
+                className="min-w-[220px] flex-1"
+                aria-label="nacos 技能列表"
+              />
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await createMarketplace({
+                      name: mktName || 'Nacos skills',
+                      type: 'nacos',
+                      config: {
+                        serverAddr: nacosAddr,
+                        skillNames: nacosSkills
+                          .split(',')
+                          .map(s => s.trim())
+                          .filter(Boolean),
+                      },
+                    });
+                    setMarkets(await listMarketplaces());
+                    setNacosAddr('');
+                    setNacosSkills('');
+                    setErr(null);
+                  } catch (e: unknown) {
+                    setErr(e instanceof Error ? e.message : '操作失败');
+                  }
+                }}
+              >
+                添加 Nacos 源
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="mb-3 text-sm font-semibold">已注册的市场源</h3>
+            {markets.map(m => (
+              <div key={m.id} className="flex items-center gap-2.5 border-b border-border py-2">
+                <div className="flex-1">
                   <strong>{m.name}</strong>{' '}
-                  <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>({m.type})</span>
+                  <span className="text-xs text-text-3">({m.type})</span>
                 </div>
-                <button
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-danger-text"
                   onClick={async () => {
                     await deleteMarketplace(m.id);
                     setMarkets(await listMarketplaces());
@@ -745,27 +643,20 @@ export default function WorkspaceDetailPage() {
                       setBrowse([]);
                     }
                   }}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid #fecaca',
-                    background: '#fff',
-                    color: '#dc2626',
-                    cursor: 'pointer',
-                  }}
                 >
-                  Delete
-                </button>
+                  <Trash2 className="h-3.5 w-3.5" /> 删除
+                </Button>
               </div>
             ))}
-          </section>
+          </Card>
 
           </>}
           {skillView === 'browse' && <>
-          <section style={card}>
-            <h3 style={{ margin: '0 0 12px' }}>Browse & install into this workspace</h3>
+          <Card className="p-4">
+            <h3 className="mb-3 text-sm font-semibold">浏览并安装到该工作空间</h3>
             <select
-              aria-label="Marketplace source"
+              aria-label="市场源"
+              className={cn(selectClass, 'mb-3')}
               value={selectedMarket}
               onChange={async e => {
                 const mid = e.target.value;
@@ -773,31 +664,24 @@ export default function WorkspaceDetailPage() {
                 if (mid) setBrowse(await browseMarketplaceSkills(mid));
                 else setBrowse([]);
               }}
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                border: '1px solid #cbd5e1',
-                marginBottom: 12,
-              }}
             >
-              <option value="">Select marketplace</option>
+              <option value="">选择市场源</option>
               {markets.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.type})
                 </option>
               ))}
             </select>
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="grid gap-2">
               {browse.map(sk => (
-                <div
-                  key={sk.dirName || sk.name}
-                  style={{ display: 'flex', gap: 12, alignItems: 'center' }}
-                >
-                  <div style={{ flex: 1 }}>
+                <div key={sk.dirName || sk.name} className="flex items-center gap-3">
+                  <div className="flex-1">
                     <strong>{sk.name}</strong>
-                    <div style={{ color: '#64748b', fontSize: '0.85rem' }}>{sk.description}</div>
+                    <div className="text-sm text-text-3">{sk.description}</div>
                   </div>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="outline"
                     disabled={skills.some(installed => installed.dirName === (sk.dirName || sk.name))}
                     onClick={async () => {
                       try {
@@ -806,27 +690,19 @@ export default function WorkspaceDetailPage() {
                         await reloadMeta();
                         setErr(null);
                       } catch (e: unknown) {
-                        setErr(e instanceof Error ? e.message : 'Install failed');
+                        setErr(e instanceof Error ? e.message : '安装失败');
                       }
                     }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #bbf7d0',
-                      background: '#dcfce7',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                    }}
                   >
-                    {skills.some(installed => installed.dirName === (sk.dirName || sk.name)) ? 'Already installed' : 'Install'}
-                  </button>
+                    {skills.some(installed => installed.dirName === (sk.dirName || sk.name)) ? '已安装' : '安装'}
+                  </Button>
                 </div>
               ))}
             </div>
-          </section>
+          </Card>
           </>}
         </div>
       )}
-    </div>
+    </Page>
   );
 }
