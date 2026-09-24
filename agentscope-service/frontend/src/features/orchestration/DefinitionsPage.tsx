@@ -137,7 +137,7 @@ function WorkflowList() {
   return (
     <Page>
       <PageHeader
-        title="Workflows"
+        title="工作流"
         description="Design repeatable work, publish a version and follow each execution."
         actions={
           canCreate && (
@@ -163,7 +163,7 @@ function WorkflowList() {
         <div className="grid gap-4 md:grid-cols-2">
           {query.data.definitions.slice(0, 20).map((d) => (
             <Link
-              className="rounded-xl border border-border bg-white p-5 hover:border-primary"
+              className="rounded-xl border border-border bg-surface p-5 hover:border-primary"
               key={d.id}
               to={scope.scopedPath(`/agent-center/workflows/${d.id}`)}
             >
@@ -186,7 +186,7 @@ function WorkflowList() {
       ) : (
         !query.isError && (
           <EmptyState
-            title="No Workflows"
+            title="暂无工作流"
             description={canCreate
               ? "Create a Workflow, configure its steps, then publish a version to run it."
               : "No workflows are available in this namespace yet."}
@@ -424,7 +424,7 @@ function WorkflowDetail({ id }: { id: string }) {
     Math.max(0, Math.ceil(filtered.length / 12) - 1),
   );
   const runList = (compact = false) => (
-    <div className="rounded-xl border border-border bg-white p-5">
+    <div className="rounded-xl border border-border bg-surface p-5">
       <h3 className="font-semibold">
         {compact ? "Recent executions" : "Executions"}
       </h3>
@@ -796,7 +796,7 @@ function WorkflowDetail({ id }: { id: string }) {
           ))}
           {!versions.length && (
             <EmptyState
-              title="No published versions"
+              title="暂无已发布版本"
               description="Save and validate your draft, then publish it from Workflow design."
             />
           )}
@@ -830,7 +830,7 @@ function WorkflowDetail({ id }: { id: string }) {
           </div>
         ) : (
           <EmptyState
-            title="Publish a version first"
+            title="请先发布一个版本"
             description="An API always targets a published Workflow version."
           />
         ))}

@@ -87,7 +87,7 @@ function RunList() {
           description="Assign an Issue or start a published Definition."
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-white">
+        <div className="overflow-hidden rounded-xl border bg-surface">
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
@@ -346,7 +346,7 @@ function RunDetail({ id }: { id: string }) {
         <div className="grid gap-5 xl:grid-cols-[2fr_1fr]">
           <section className="space-y-5">
             {run.input != null && (
-              <div className="rounded-xl border bg-white p-5">
+              <div className="rounded-xl border bg-surface p-5">
                 <h2 className="font-semibold">Original request input</h2>
                 <pre className="mt-3 whitespace-pre-wrap break-words rounded bg-muted p-3 text-sm">
                   {typeof run.input === "string"
@@ -355,7 +355,7 @@ function RunDetail({ id }: { id: string }) {
                 </pre>
               </div>
             )}
-            <div className="rounded-xl border bg-white p-5">
+            <div className="rounded-xl border bg-surface p-5">
               <h2 className="font-semibold">Execution graph</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {nodes.map((node) => (
@@ -386,7 +386,7 @@ function RunDetail({ id }: { id: string }) {
                 ))}
               </div>
             </div>
-            <div className="rounded-xl border bg-white p-5">
+            <div className="rounded-xl border bg-surface p-5">
               <h2 className="font-semibold">
                 Agent steps and runtime attempts
               </h2>
@@ -493,7 +493,7 @@ function RunDetail({ id }: { id: string }) {
             </div>
           </section>
           <aside className="space-y-4">
-            <div className="rounded-xl border bg-white p-4">
+            <div className="rounded-xl border bg-surface p-4">
               <h2 className="font-semibold">Signal</h2>
               <div className="mt-3 flex gap-2">
                 <Input
@@ -514,7 +514,7 @@ function RunDetail({ id }: { id: string }) {
                 </Button>
               </div>
             </div>
-            <div className="rounded-xl border bg-white p-4">
+            <div className="rounded-xl border bg-surface p-4">
               <h2 className="font-semibold">Usage / policy</h2>
               <pre className="mt-3 overflow-auto rounded bg-muted p-3 text-xs">
                 {JSON.stringify(
@@ -524,7 +524,7 @@ function RunDetail({ id }: { id: string }) {
                 )}
               </pre>
             </div>
-            <div className="rounded-xl border bg-white p-4">
+            <div className="rounded-xl border bg-surface p-4">
               <h2 className="font-semibold">Events</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Provider-native events, dispatch diagnostics, and structured
