@@ -188,6 +188,67 @@ export async function mockVisualApi(page: Page, roles: string[] = ['admin']) {
     if (path === '/api/v1/endpoints/ep-1/invocations') return json({ items: [{ id: 'inv-1', endpointId: 'ep-1', status: 'completed', correlationId: 'corr-1', createdAt: hoursAgo(1) }] });
     if (path === '/api/v1/endpoints/ep-1/releases') return json({ items: [{ id: 'rel-1', endpointId: 'ep-1', number: 1, targetType: 'agent', targetRef: AGENT_ID, reason: 'initial publish', activatedAt: hoursAgo(58) }] });
 
+    // ---- JICH-345 阶段 C 第三批（C14–C19）视觉基线数据 ----
+
+    // C14 自动化
+    if (path === '/api/v1/automations' && !path.includes('/schedule-preview')) return json({ items: [
+      { id: 'auto-1', tenant: 'default', namespace: 'default', name: '每日工程动态摘要', description: '每个工作日汇总项目动态。', enabled: true, actionType: 'create_issue', execution: { outputMode: 'create_issue', assigneeType: 'agent', assigneeRef: AGENT_ID, runbook: '1. 回顾项目动态。\n2. 汇总变更与阻塞。', completionPolicy: 'review', concurrencyPolicy: 'skip', queueTimeoutSeconds: 3600, runTimeoutSeconds: 3600, contextRefs: [], subscribers: [] }, triggers: [{ id: 'trg-1', type: 'cron', enabled: true, schedule: '0 9 * * 1-5', timezone: 'Asia/Shanghai', nextRunAt: hoursAgo(-14) }], lastRunAt: hoursAgo(10), nextRunAt: hoursAgo(-14), version: 2 },
+    ] });
+    if (path === '/api/v1/automations/schedule-preview') return json({ nextRuns: [hoursAgo(-2), hoursAgo(-26), hoursAgo(-50)] });
+
+    // C15 资源管理（工作空间 / 运行环境 / 记忆库 / 密钥库）
+    if (path === '/api/workspaces') return json([
+      { id: 'ws-pack', name: '评审工作空间', description: '评审助手共享的工具与技能包。', version: 3, skillCount: 4, subagentCount: 2, agentsMdExists: true },
+    ]);
+    if (path === '/api/workspaces/ws-pack/file') return json({ content: '# 评审工作空间\n\n共享操作说明。' });
+    if (path === '/api/workspaces/ws-pack/tools') return json({ tools: [], mcpServers: [] });
+    if (path === '/api/workspaces/ws-pack/skills') return json([]);
+    if (path === '/api/workspaces/ws-pack/subagents') return json([]);
+    if (path === '/api/workspaces/ws-pack/publications') return json({ items: [] });
+    if (path === '/api/environments') return json([
+      { id: 'env-local', name: '本地默认环境', type: 'local', config: {}, createdAt: hoursAgo(300) },
+    ]);
+    if (path === '/api/hands/status') return json({ brainInstanceId: 'brain-1', pendingWorkItems: 0, localSandboxRegistrySize: 1, workerHeartbeats: {} });
+    if (path === '/api/memory-stores') return json([
+      { id: 'mem-1', name: '评审知识库', description: '跨会话共享的评审知识。', archivedAt: undefined },
+    ]);
+    if (path === '/api/memory-stores/mem-1/memories') return json([
+      { id: 'note-1', path: 'notes.md', headVersion: 2, content: '# 评审要点' },
+    ]);
+    if (path === '/api/memory-stores/mem-1/consumers') return json({ items: [] });
+    if (path === '/api/vaults') return json([
+      { id: 'vault-1', displayName: '评审凭据库' },
+    ]);
+    if (path === '/api/vaults/vault-1/credentials') return json([
+      { id: 'cred-1', type: 'static_bearer', label: 'GitHub MCP', target: 'github' },
+    ]);
+    if (path === '/api/vaults/vault-1/consumers') return json({ items: [] });
+
+    // C16 权限与治理
+    if (path === '/api/v1/namespaces') return json({ items: [
+      { name: 'default', tenant: 'default', displayName: '默认空间', kind: 'shared', roles: ['admin', 'member'], memberCount: 2, owner: 'alice', archived: false, canManage: true, version: 3 },
+    ] });
+
+    // C17 工作动态
+    if (path === '/api/v1/dead-letters') return json({ items: [
+      { id: 'dl-1', eventType: 'issue.updated', aggregateType: 'issue', aggregateId: ISSUE_ID, attempts: 5, lastError: 'webhook 超时', createdAt: hoursAgo(3) },
+    ] });
+
+    // C18 渠道集成
+    if (path === '/api/channels/types') return json([
+      { type: 'dingtalk', label: '钉钉', credentialKeys: [] },
+      { type: 'chatui', label: '网页聊天', credentialKeys: [] },
+    ]);
+    if (path === '/api/channels') return json([
+      { channelId: 'dingtalk-review', type: 'dingtalk', dmScope: 'PER_PEER', defaultAgentId: AGENT_ID, disabled: false, started: true },
+    ]);
+
+    // C19 个人资料
+    if (path === '/api/user/profile') return json({ userId: 'u-1', username: 'alice', displayName: '张三', roles: ['user', 'admin'] });
+    if (path === '/api/user/login-sessions') return json({ items: [
+      { id: 'sess-1', userAgent: 'Chrome / macOS', current: true, lastSeenAt: hoursAgo(0.2), expiresAt: hoursAgo(-72) },
+    ] });
+
     if (path.endsWith('/events/stream')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
     return json({ items: [], summary: {} });
   });

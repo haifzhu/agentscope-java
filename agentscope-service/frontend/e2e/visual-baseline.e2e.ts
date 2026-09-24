@@ -132,6 +132,59 @@ const PAGES: Array<{ id: string; path: string; assert: (page: Page) => Promise<u
     path: '/agent-center/endpoints/ep-1',
     assert: page => expect(page.getByRole('heading', { name: '凭据与安全' })).toBeVisible(),
   },
+  // ---- JICH-345 第三批（C14–C19）----
+
+  // C14 自动化（四步向导入口 + 列表三态）
+  {
+    id: 'automations',
+    path: '/work/automations',
+    assert: page => expect(page.getByRole('heading', { name: '自动化' })).toBeVisible(),
+  },
+  // C15 资源管理统一（工作空间列表范式）
+  {
+    id: 'resources-workspaces',
+    path: '/agent-center/workspaces',
+    assert: page => expect(page.getByText('评审工作空间')).toBeVisible(),
+  },
+  {
+    id: 'resources-environments',
+    path: '/agent-center/environments',
+    assert: page => expect(page.getByRole('heading', { name: '运行环境' })).toBeVisible(),
+  },
+  {
+    id: 'resources-memory',
+    path: '/agent-center/memory',
+    assert: page => expect(page.getByRole('heading', { name: '记忆库' })).toBeVisible(),
+  },
+  {
+    id: 'resources-vaults',
+    path: '/agent-center/vaults',
+    assert: page => expect(page.getByRole('heading', { name: '密钥库' })).toBeVisible(),
+  },
+  // C16 权限与治理（命名空间 + 三层模型解释）
+  {
+    id: 'governance-namespaces',
+    path: '/settings/namespaces',
+    assert: page => expect(page.getByRole('heading', { name: '命名空间' })).toBeVisible(),
+  },
+  // C17 工作动态（正式入口 + 时间线）
+  {
+    id: 'work-activity',
+    path: '/work/activity',
+    assert: page => expect(page.getByRole('heading', { name: '工作动态' })).toBeVisible(),
+  },
+  // C18 渠道集成
+  {
+    id: 'channels-hub',
+    path: '/agent-center/entrypoints',
+    assert: page => expect(page.getByRole('heading', { name: '接入渠道' })).toBeVisible(),
+  },
+  // C19 个人资料
+  {
+    id: 'profile',
+    path: '/settings/profile',
+    assert: page => expect(page.getByRole('heading', { name: '个人资料' })).toBeVisible(),
+  },
 ];
 
 async function applyTheme(page: Page, theme: Theme) {

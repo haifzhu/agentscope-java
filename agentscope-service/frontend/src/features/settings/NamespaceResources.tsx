@@ -36,7 +36,7 @@ export function NamespaceResources({ namespace }: { namespace: string }) {
     <div className="grid gap-3 lg:grid-cols-2">{items.map(({ resource: r, actions }) => <Link key={`${r.kind}:${r.id}`} to={resourceURL(namespace, r.kind, r.id)} className="space-y-3 rounded-xl border p-5 hover:border-primary">
       <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{r.name}</h3><Badge>{r.kind}</Badge></div>
       <div className="flex flex-wrap gap-2">{actions.map(a => <Badge key={a}>{a}</Badge>)}</div>
-      {r.dependencies && <p className="text-xs text-slate-500">{r.dependencies.length} 个依赖</p>}
+      {r.dependencies && <p className="text-xs text-text-3">{r.dependencies.length} 个依赖</p>}
       <p className="text-sm text-primary">查看访问与依赖 →</p>
     </Link>)}</div>
     {!query.isLoading && !query.error && items.length === 0 && <p className="rounded-xl border border-dashed p-6 text-sm text-text-3">没有符合条件的可访问资源。</p>}

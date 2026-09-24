@@ -60,6 +60,22 @@ const CONTRACT_ENFORCED = [
   'src/features/orchestration/WorkflowGraph.tsx',
   'src/features/orchestration/WorkflowExecution.tsx',
   'src/features/build/deployments/EndpointDetailPage.tsx',
+  // JICH-345 阶段 C 第三批（C14–C19）：以下域已完成令牌化，回归即报错
+  'src/features/automations/**/*.{ts,tsx}',
+  'src/features/operate/AutomationsPage.tsx',
+  'src/pages/WorkspacesHubPage.tsx',
+  'src/pages/WorkspaceDetailPage.tsx',
+  'src/pages/EnvironmentsHubPage.tsx',
+  'src/pages/MemoryStoresPage.tsx',
+  'src/pages/VaultsPage.tsx',
+  'src/features/settings/**/*.{ts,tsx}',
+  'src/pages/AdminUsersPage.tsx',
+  'src/features/work/WorkActivityPage.tsx',
+  'src/pages/ChannelsHubPage.tsx',
+  'src/pages/ChannelDetailPage.tsx',
+  'src/pages/AgentChannelsPage.tsx',
+  'src/pages/ProfilePage.tsx',
+  'src/pages/LoginPage.tsx',
 ];
 
 export default tseslint.config(

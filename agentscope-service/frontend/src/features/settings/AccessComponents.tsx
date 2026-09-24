@@ -65,8 +65,8 @@ export function AccountPicker({ namespace, value, onChange, label = '查找账�
     {value ? <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm"><span>{chosen ? accountLabel(chosen) : value}</span><Button type="button" variant="ghost" size="sm" onClick={() => { onChange(''); setOpen(true); }}>更改</Button></div> : <>
       <Input aria-label={label} role="combobox" aria-expanded={open} aria-controls={`accounts-${label.replace(/ /g, '-')}`} autoComplete="off" placeholder="按姓名或用户名搜索" value={text} onFocus={() => setOpen(true)} onChange={event => { setText(event.target.value); setOpen(true); }} />
       {open && <div id={`accounts-${label.replace(/ /g, '-')}`} role="listbox" aria-label={`${label} results`} className="max-h-48 overflow-auto rounded-lg border border-border bg-surface p-1">
-        {accounts.isLoading ? <p className="p-2 text-xs text-slate-500">正在搜索账号…</p> : accounts.data?.items.filter(a => !a.disabled && !exclude.includes(a.userId)).map(a => <button type="button" role="option" aria-selected={false} key={a.userId} className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-hover" onClick={() => { onChange(a.userId); setOpen(false); setText(''); }}>{accountLabel(a)}</button>)}
-        {accounts.data && !accounts.data.items.some(a => !a.disabled && !exclude.includes(a.userId)) && <p className="p-2 text-xs text-slate-500">没有匹配的可用账号。</p>}
+        {accounts.isLoading ? <p className="p-2 text-xs text-text-3">正在搜索账号…</p> : accounts.data?.items.filter(a => !a.disabled && !exclude.includes(a.userId)).map(a => <button type="button" role="option" aria-selected={false} key={a.userId} className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-hover" onClick={() => { onChange(a.userId); setOpen(false); setText(''); }}>{accountLabel(a)}</button>)}
+        {accounts.data && !accounts.data.items.some(a => !a.disabled && !exclude.includes(a.userId)) && <p className="p-2 text-xs text-text-3">没有匹配的可用账号。</p>}
         <ErrorNotice error={accounts.error} />
       </div>}
     </>}

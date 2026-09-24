@@ -50,7 +50,7 @@ function CreateNamespaceForm({ onCreated }: { onCreated: (name: string) => void 
   const create = useMutation({ mutationFn: () => createNamespace(name.trim(), displayName.trim(), owner, members), onSuccess: result => onCreated(result.namespace.name) });
   return <form className="space-y-5" onSubmit={event => { event.preventDefault(); create.mutate(); }}>
     <label className="block space-y-2 text-sm font-medium">显示名称<Input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="工程部" maxLength={200} required /></label>
-    <label className="block space-y-2 text-sm font-medium">Namespace name<Input aria-label="Namespace name" value={name} onChange={event => setName(event.target.value)} placeholder="engineering" pattern="[a-z0-9][a-z0-9-]{0,62}" required /><span className="block text-xs font-normal text-slate-500">稳定标识符。请使用小写字母、数字与连字符。</span></label>
+    <label className="block space-y-2 text-sm font-medium">Namespace name<Input aria-label="Namespace name" value={name} onChange={event => setName(event.target.value)} placeholder="engineering" pattern="[a-z0-9][a-z0-9-]{0,62}" required /><span className="block text-xs font-normal text-text-3">稳定标识符。请使用小写字母、数字与连字符。</span></label>
     <div className="space-y-2"><p className="text-sm font-medium">所有者</p><AccountPicker value={owner} onChange={setOwner} label="查找命名空间所有者" /></div>
     <div className="space-y-3"><p className="text-sm font-medium">初始成员</p><MembersEditor owner={owner} members={members} onChange={setMembers} /></div>
     <ErrorNotice error={create.error} /><Button type="submit" disabled={!name.trim() || !displayName.trim() || !owner || create.isPending || Object.values(members).some(r => !r.length)}>{create.isPending ? '创建中…' : '创建命名空间'}</Button>
