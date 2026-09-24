@@ -34,6 +34,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatRelative } from '@/lib/format';
 
+const TASK_STATUS_LABEL: Record<string, string> = {
+  completed: '已完成', failed: '失败', cancelled: '已取消',
+  running: '运行中', dispatched: '已派发', pending: '待处理',
+};
+
 function tone(status: string): 'default' | 'success' | 'warning' | 'danger' | 'info' {
   if (status === 'completed') return 'success';
   if (['failed', 'cancelled'].includes(status)) return 'danger';
@@ -63,49 +68,49 @@ export default function TasksPage() {
   return (
     <Page>
       <PageHeader
-        title="Agent tasks"
-        description="Execution obligations created by assignment, discussion, delegation, automation, or retry."
+        title="智能体任务"
+        description="由分派、讨论、委派、自动化或重试产生的执行义务。"
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <label className="relative w-full sm:w-80">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input className="pl-9 shadow-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tasks" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3" />
+          <Input className="pl-9 shadow-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索任务" />
         </label>
-        <select className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="dispatched">Dispatched</option>
-          <option value="running">Running</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
-          <option value="cancelled">Cancelled</option>
+        <select className="h-10 rounded-lg border border-border bg-surface px-3 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
+          <option value="">全部状态</option>
+          <option value="pending">待处理</option>
+          <option value="dispatched">已派发</option>
+          <option value="running">运行中</option>
+          <option value="completed">已完成</option>
+          <option value="failed">失败</option>
+          <option value="cancelled">已取消</option>
         </select>
       </div>
       {!tasks.isLoading && !items.length ? (
-        <EmptyState title={search ? 'No matching tasks' : 'No agent tasks'} description={search ? 'Try another search or status filter.' : 'Assign or mention an Agent from an Issue to create work.'} />
+        <EmptyState title={search ? '没有匹配的任务' : '暂无智能体任务'} description={search ? '换个搜索词或状态筛选试试。' : '在事项中分派或 @ 某个智能体即可创建任务。'} />
       ) : (
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 text-xs text-slate-500"><span>{tasks.isLoading ? 'Loading tasks…' : `${items.length} task${items.length === 1 ? '' : 's'}`}</span><span className="hidden sm:block">Updated automatically</span></div>
+          <div className="flex items-center justify-between border-b border-border px-5 py-3 text-xs text-text-3"><span>{tasks.isPending ? '正在加载任务…' : `共 ${items.length} 个任务`}</span><span className="hidden sm:block">Updated automatically</span></div>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[780px] text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400"><tr><th className="px-5 py-3">Task</th><th className="px-4 py-3">Issue</th><th className="px-4 py-3">Agent / role</th><th className="px-4 py-3">Inputs</th><th className="px-4 py-3">Status</th><th className="w-12 px-4 py-3"><span className="sr-only">Open</span></th></tr></thead>
-              <tbody className="divide-y divide-slate-100">{items.map((task) => (
-                <tr key={task.id} className="group hover:bg-slate-50/70">
-                  <td className="px-5 py-4"><Link className="font-mono text-sm font-medium text-slate-900 group-hover:text-indigo-700" to={scope.scopedPath(`/work/executions/tasks/${task.id}`)}>{task.id.slice(0, 10)}</Link><div className="mt-1 text-xs text-slate-400">{formatRelative(task.createdAt)}</div></td>
-                  <td className="px-4 py-4"><Link className="text-xs text-slate-600 hover:text-indigo-700" to={scope.scopedPath(`/work/issues/${task.issueId}`)}><EntityIdentityText identities={identities} type="issue" entityRef={task.issueId} secondary /></Link></td>
-                  <td className="px-4 py-4"><EntityIdentityText identities={identities} type="agent" entityRef={task.agentId} /><div className="mt-1 text-xs text-slate-400">{task.teamRole || task.triggerType}</div></td>
-                  <td className="px-4 py-4 text-slate-600">{task.inputs?.length || 0}</td>
-                  <td className="px-4 py-4"><Badge tone={tone(task.status)}>{task.status.replace(/_/g, ' ')}</Badge></td>
-                  <td className="px-4 py-4 text-slate-300"><ChevronRight className="h-4 w-4" /></td>
+              <thead className="border-b border-border bg-surface-2/70 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3"><tr><th className="px-5 py-3">任务</th><th className="px-4 py-3">事项</th><th className="px-4 py-3">智能体 / 角色</th><th className="px-4 py-3">输入</th><th className="px-4 py-3">状态</th><th className="w-12 px-4 py-3"><span className="sr-only">Open</span></th></tr></thead>
+              <tbody className="divide-y divide-border">{items.map((task) => (
+                <tr key={task.id} className="group hover:bg-surface-2/70">
+                  <td className="px-5 py-4"><Link className="font-mono text-sm font-medium text-text group-hover:text-primary" to={scope.scopedPath(`/work/executions/tasks/${task.id}`)}>{task.id.slice(0, 10)}</Link><div className="mt-1 text-xs text-text-3">{formatRelative(task.createdAt)}</div></td>
+                  <td className="px-4 py-4"><Link className="text-xs text-text-2 hover:text-primary" to={scope.scopedPath(`/work/issues/${task.issueId}`)}><EntityIdentityText identities={identities} type="issue" entityRef={task.issueId} secondary /></Link></td>
+                  <td className="px-4 py-4"><EntityIdentityText identities={identities} type="agent" entityRef={task.agentId} /><div className="mt-1 text-xs text-text-3">{task.teamRole || task.triggerType}</div></td>
+                  <td className="px-4 py-4 text-text-2">{task.inputs?.length || 0}</td>
+                  <td className="px-4 py-4"><Badge tone={tone(task.status)}>TASK_STATUS_LABEL[task.status] ?? task.status</Badge></td>
+                  <td className="px-4 py-4 text-text-3"><ChevronRight className="h-4 w-4" /></td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
-          <div className="divide-y divide-slate-100 md:hidden">{items.map((task) => (
-            <Link key={task.id} to={scope.scopedPath(`/work/executions/tasks/${task.id}`)} className="flex gap-3 px-4 py-4 hover:bg-slate-50">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><Bot className="h-4 w-4" /></span>
-              <div className="min-w-0 flex-1"><div className="truncate font-mono text-sm font-medium text-slate-900">{task.id.slice(0, 10)}</div><div className="mt-1 truncate text-xs text-slate-500"><EntityIdentityText identities={identities} type="agent" entityRef={task.agentId} /> · {formatRelative(task.createdAt)}</div><Badge className="mt-2" tone={tone(task.status)}>{task.status.replace(/_/g, ' ')}</Badge></div>
-              <ChevronRight className="mt-2 h-4 w-4 text-slate-300" />
+          <div className="divide-y divide-border md:hidden">{items.map((task) => (
+            <Link key={task.id} to={scope.scopedPath(`/work/executions/tasks/${task.id}`)} className="flex gap-3 px-4 py-4 hover:bg-hover">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border text-text-3"><Bot className="h-4 w-4" /></span>
+              <div className="min-w-0 flex-1"><div className="truncate font-mono text-sm font-medium text-text">{task.id.slice(0, 10)}</div><div className="mt-1 truncate text-xs text-text-3"><EntityIdentityText identities={identities} type="agent" entityRef={task.agentId} /> · {formatRelative(task.createdAt)}</div><Badge className="mt-2" tone={tone(task.status)}>TASK_STATUS_LABEL[task.status] ?? task.status</Badge></div>
+              <ChevronRight className="mt-2 h-4 w-4 text-text-3" />
             </Link>
           ))}</div>
         </Card>
