@@ -66,17 +66,17 @@ function actorName(activity: IssueActivity, identities: EntityIdentityMap) {
 function activityText(activity: IssueActivity, identities: EntityIdentityMap) {
   const details = activity.details || {};
   switch (activity.action) {
-    case "issue.created": return "created the issue";
-    case "issue.updated": return "updated the issue details";
-    case "issue.assigned": return `assigned the issue to ${entityDisplayName(identities, activity.objectType, activity.objectRef)}`;
-    case "issue.status_changed": return `changed status from ${String(details.from || "—").replace(/_/g, " ")} to ${String(details.to || "—").replace(/_/g, " ")}`;
-    case "issue.archived": return "archived the issue";
-    case "comment.created": return "added a comment";
-    case "comment.resolved": return "resolved a discussion thread";
-    case "comment.unresolved": return "reopened a discussion thread";
-    case "comment.updated": return "edited a comment";
-    case "comment.deleted": return "deleted a comment";
-    case "agent_task.completed": return "completed an Agent task";
+    case "issue.created": return "创建了事项";
+    case "issue.updated": return "更新了事项详情";
+    case "issue.assigned": return `将事项指派给 ${entityDisplayName(identities, activity.objectType, activity.objectRef)}`;
+    case "issue.status_changed": return `把状态从「${issueStatusLabel(String(details.from || ""))}」改为「${issueStatusLabel(String(details.to || ""))}」`;
+    case "issue.archived": return "归档了事项";
+    case "comment.created": return "发表了评论";
+    case "comment.resolved": return "解决了讨论串";
+    case "comment.unresolved": return "重新打开了讨论串";
+    case "comment.updated": return "编辑了评论";
+    case "comment.deleted": return "删除了评论";
+    case "agent_task.completed": return "完成了一项智能体任务";
     default: return activity.action.replace(/[._]/g, " ");
   }
 }
@@ -86,9 +86,17 @@ function dayLabel(value: string) {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (date.toDateString() === today.toDateString()) return "今天";
+  if (date.toDateString() === yesterday.toDateString()) return "昨天";
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: date.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+}
+
+const ISSUE_STATUS_LABELS: Record<string, string> = {
+  todo: "待处理", in_progress: "进行中", in_review: "评审中", blocked: "受阻", done: "已完成", cancelled: "已取消",
+};
+function issueStatusLabel(value: string) {
+  if (!value) return "—";
+  return ISSUE_STATUS_LABELS[value] || value.replace(/_/g, " ");
 }
 
 export default function WorkActivityPage() {
@@ -152,11 +160,11 @@ export default function WorkActivityPage() {
   return (
     <WorkPage>
       <WorkPageHeader
-        title="Activity"
-        description="A chronological view of work changes, decisions, comments, and agent execution."
+        title="工作动态"
+        description="按时间顺序查看工作变更、决策、评论与智能体执行。"
         actions={
           <Button variant="outline" onClick={() => void feed.refetch()} disabled={feed.isFetching}>
-            <RefreshCw className={feed.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Refresh
+            <RefreshCw className={feed.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> 刷新
           </Button>
         }
       />
@@ -164,15 +172,15 @@ export default function WorkActivityPage() {
       <div className="flex justify-end">
         <label className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-4" />
-          <Input className="pl-9 shadow-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" />
+          <Input className="pl-9 shadow-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索动态" />
         </label>
       </div>
 
       {canOperate && !!deadLetters.data?.items.length && (
         <WorkPanel>
           <WorkPanelHeader
-            title="Delivery failures"
-            description="Control-plane events that exhausted automatic retries. Replay after the underlying problem is resolved."
+            title="投递失败"
+            description="自动重试耗尽的控制面事件。修复底层问题后可重放。"
           />
           <div className="divide-y divide-border">
             {deadLetters.data.items.map((event) => (
@@ -183,11 +191,11 @@ export default function WorkActivityPage() {
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-text">{event.eventType}</div>
                   <div className="truncate text-xs text-text-3">
-                    {event.aggregateType}/{event.aggregateId} · attempts {event.attempts} · {event.lastError}
+                    {event.aggregateType}/{event.aggregateId} · 已尝试 {event.attempts} 次 · {event.lastError}
                   </div>
                 </div>
                 <Button size="sm" variant="outline" disabled={replay.isPending} onClick={() => replay.mutate(event.id)}>
-                  Replay
+                  重放
                 </Button>
               </div>
             ))}
@@ -197,13 +205,13 @@ export default function WorkActivityPage() {
 
       <WorkPanel>
         <WorkPanelHeader
-          title="Workspace timeline"
-          description={feed.isLoading ? "Loading activity…" : `${filtered.length} event${filtered.length === 1 ? "" : "s"} across recent issues`}
+          title="工作区时间线"
+          description={feed.isLoading ? "正在加载动态…" : `近期事项共 ${filtered.length} 条动态`}
         />
         {feed.isLoading ? (
           <WorkLoadingRows rows={7} />
         ) : feed.isError ? (
-          <WorkEmpty title="Activity could not be loaded" description="Check the control plane connection and try again." />
+          <WorkEmpty title="动态加载失败" description="请检查控制面连接后重试。" />
         ) : groups.length ? (
           <div>
             {groups.map((group) => (
@@ -243,8 +251,8 @@ export default function WorkActivityPage() {
           </div>
         ) : (
           <WorkEmpty
-            title={search ? "No matching activity" : "No activity yet"}
-            description={search ? "Try another search term." : "Issue updates, discussions, and agent results will appear here."}
+            title={search ? "没有匹配的动态" : "暂无动态"}
+            description={search ? "换个关键词试试。" : "事项更新、讨论与智能体结果会在这里呈现。"}
           />
         )}
       </WorkPanel>
