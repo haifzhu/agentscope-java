@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useControlPlaneScope } from '@/app/ScopeContext';
 import ChannelWorkPanel from '@/components/ChannelWorkPanel';
 import {
@@ -36,55 +37,27 @@ import PlatformCredentialsForm, {
   propertiesFromCredentials,
 } from '../components/PlatformCredentialsForm';
 import { AgentIdentity, AgentPicker } from '../components/AgentPicker';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Page, PageHeader } from '@/components/Page';
 
 const DM_SCOPES = ['MAIN', 'PER_PEER'];
 
-const S: Record<string, React.CSSProperties> = {
-  root: { padding: '32px 36px', maxWidth: 1100 },
-  backLink: {
-    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-    color: '#4f46e5', fontSize: '0.88rem', marginBottom: 12,
-  },
-  title: { margin: '0 0 6px', fontSize: '1.6rem', fontWeight: 700, color: '#0f172a' },
-  subtle: { color: '#64748b', fontSize: '0.92rem' },
-  section: {
-    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14,
-    padding: '20px 22px', marginBottom: 16,
-    boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
-  },
-  sectionHead: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 },
-  sectionTitle: { fontSize: '1.02rem', fontWeight: 600, color: '#0f172a', margin: 0 },
-  field: { display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: 6, fontWeight: 500 },
-  input: {
-    width: '100%', boxSizing: 'border-box', padding: '10px 12px',
-    background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 8,
-    color: '#0f172a', fontSize: '0.92rem',
-  },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-  badge: {
-    padding: '3px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600,
-    background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0',
-  },
-  btn: {
-    padding: '8px 16px', fontSize: '0.86rem', fontWeight: 500, borderRadius: 8, cursor: 'pointer',
-    border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569',
-  },
-  btnPrimary: {
-    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)',
-    color: '#ffffff', border: 'none',
-    boxShadow: '0 1px 4px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.18)',
-  },
-  bindingRow: {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '10px 12px', borderRadius: 9, fontSize: '0.9rem', color: '#334155',
-    background: '#f8fafc', marginBottom: 6, border: '1px solid #f1f5f9',
-  },
-  err: { color: '#dc2626', fontSize: '0.9rem', marginTop: 8 },
-  ok: { color: '#16a34a', fontSize: '0.9rem', marginTop: 8 },
-  callout: {
-    marginTop: 14, padding: '12px 14px', borderRadius: 10,
-    background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.86rem', color: '#334155',
-  },
+const selectClass =
+  'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
+
+const STATUS_LABEL: Record<string, string> = {
+  disabled: '已停用', running: '运行中', stopped: '已停止',
 };
 
 function describe(b: BindingConfigEntry): string {
@@ -95,7 +68,7 @@ function describe(b: BindingConfigEntry): string {
   if (b.roles && b.roles.length) parts.push(`roles=${b.roles.join('|')}`);
   if (b.team) parts.push(`platformTeam=${b.team}`);
   if (b.account) parts.push(`account=${b.account}`);
-  return parts.join(', ') || '(catch-all)';
+  return parts.join(', ') || '（兜底）';
 }
 
 interface BindingForm {
@@ -158,7 +131,7 @@ export default function ChannelDetailPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<BindingForm | null>(null);
 
-  const typeSpec = useMemo(() => types.find((t) => t.type === type), [types, type]);
+  const typeSpec = useMemo(() => types.find(t => t.type === type), [types, type]);
   const callbackUrl = useMemo(
     () => resolveCallbackUrl(typeSpec, channelId),
     [typeSpec, channelId],
@@ -173,7 +146,7 @@ export default function ChannelDetailPage() {
       setType(d.type);
       setDmScope(d.dmScope ?? 'PER_PEER');
       setDefaultAgentId(d.defaultAgentId ?? '');
-      const spec = t.find((x) => x.type === d.type);
+      const spec = t.find(x => x.type === d.type);
       setCreds(credentialsFromProperties(spec, d.properties));
       setBindings(d.bindings ?? []);
     } catch (e: unknown) {
@@ -185,9 +158,9 @@ export default function ChannelDetailPage() {
 
   function onTypeChange(next: string) {
     if (next === type) return;
-    if (!confirm('Switching platform clears the credential form. Continue?')) return;
+    if (!confirm('切换平台会清空凭据表单，确认继续？')) return;
     setType(next);
-    const spec = types.find((t) => t.type === next);
+    const spec = types.find(t => t.type === next);
     setCreds(credentialsFromProperties(spec, undefined));
   }
 
@@ -209,9 +182,9 @@ export default function ChannelDetailPage() {
       const updated = await updateChannel(channelId, req);
       setDetail(updated);
       setBindings(updated.bindings ?? []);
-      const spec = types.find((x) => x.type === updated.type);
+      const spec = types.find(x => x.type === updated.type);
       setCreds(credentialsFromProperties(spec, updated.properties));
-      setInfo('Saved. Scheduler will pick up changes on the next refresh.');
+      setInfo('已保存。调度器会在下次刷新时生效。');
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : String(e));
     }
@@ -229,7 +202,7 @@ export default function ChannelDetailPage() {
   }
 
   async function handleDeleteChannel() {
-    if (!confirm(`Delete channel '${channelId}'? This removes its entry and all bindings.`)) return;
+    if (!confirm(`确认删除渠道「${channelId}」？其条目与全部绑定都会被移除。`)) return;
     try {
       await deleteChannel(channelId);
       navigate('/agent-center/entrypoints');
@@ -250,7 +223,7 @@ export default function ChannelDetailPage() {
 
   async function saveBinding() {
     if (editForm == null || editIdx == null) return;
-    if (!editForm.agentId.trim()) { setErr('agentId is required'); return; }
+    if (!editForm.agentId.trim()) { setErr('请填写目标智能体'); return; }
     const next = [...bindings];
     const entry = formToBinding(editForm);
     if (editIdx >= bindings.length) next.push(entry);
@@ -262,7 +235,7 @@ export default function ChannelDetailPage() {
   }
 
   async function deleteBindingAt(i: number) {
-    if (!confirm(`Delete binding #${i} (${describe(bindings[i])})?`)) return;
+    if (!confirm(`确认删除规则 #${i}（${describe(bindings[i])}）？`)) return;
     const next = bindings.filter((_, idx) => idx !== i);
     setBindings(next);
     await persist({ bindings: next });
@@ -275,113 +248,115 @@ export default function ChannelDetailPage() {
   }, [detail]);
 
   if (!admin) {
-    return <div className="console-page-legacy" style={S.root}><h1 style={S.title}>{channelId}</h1><ChannelWorkPanel channelId={channelId} canConfigure={false} /></div>;
+    return <Page className="max-w-[1100px]"><PageHeader title={channelId} /><ChannelWorkPanel channelId={channelId} canConfigure={false} /></Page>;
   }
 
   if (!detail && !err) {
-    return <div className="console-page-legacy" style={S.root}>Loading…</div>;
+    return <Page className="max-w-[1100px]"><p className="text-sm text-text-3">正在加载…</p></Page>;
   }
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <button style={S.backLink} onClick={() => navigate('/agent-center/entrypoints')}>← All channels</button>
-      <h1 style={S.title}>{channelId}</h1>
-      <div style={S.subtle}>连接平台、配置工作接待，并按已授权的工作关联回传消息。</div>
+    <Page className="max-w-[1100px]">
+      <Button variant="ghost" size="sm" onClick={() => navigate('/agent-center/entrypoints')}>
+        <ArrowLeft className="h-4 w-4" /> 全部渠道
+      </Button>
+      <PageHeader title={channelId} description="连接平台、配置工作接待，并按已授权的工作关联回传消息。" />
 
-      {err && <div style={{ ...S.err, marginTop: 16 }}>{err}</div>}
-      {info && <div style={{ ...S.ok, marginTop: 16 }}>{info}</div>}
+      {err && <div role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger-text">{err}</div>}
+      {info && <p role="status" className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success-text">{info}</p>}
 
       <ChannelWorkPanel channelId={channelId} canConfigure={admin} />
       {detail && (
         <>
-          <div style={{ ...S.section, marginTop: 18 }}>
-            <div style={S.sectionHead}>
-              <h2 style={S.sectionTitle}>平台连接与普通会话</h2>
-              <span style={S.badge}>{status}</span>
-              {detail.lastError ? <span style={{ ...S.badge, color: '#dc2626' }}>{detail.lastError}</span> : null}
-              <span style={{ flex: 1 }} />
-              <button style={S.btn} onClick={toggleDisabled}>
-                {detail.disabled ? 'Enable' : 'Disable'}
-              </button>
-              <button style={{ ...S.btn, color: '#dc2626', borderColor: '#fca5a5' }} onClick={handleDeleteChannel}>
-                Delete
-              </button>
+          <Card className="space-y-5 p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-base font-semibold">平台连接与普通会话</h2>
+              <Badge tone={status === 'running' ? 'success' : status === 'disabled' ? 'danger' : 'default'}>
+                {STATUS_LABEL[status] ?? status}
+              </Badge>
+              {detail.lastError && <Badge tone="danger">{detail.lastError}</Badge>}
+              <span className="flex-1" />
+              <Button variant="outline" onClick={() => void toggleDisabled()}>
+                {detail.disabled ? '启用' : '停用'}
+              </Button>
+              <Button variant="outline" className="text-danger-text" onClick={() => void handleDeleteChannel()}>
+                <Trash2 className="h-3.5 w-3.5" /> 删除
+              </Button>
             </div>
-            <div style={S.grid2}>
-              <div>
-                <label style={S.field}>Platform</label>
-                <select style={S.input} value={type} onChange={e => onTypeChange(e.target.value)}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2 text-sm font-medium">
+                平台
+                <select className={selectClass} value={type} onChange={e => onTypeChange(e.target.value)}>
                   {types.map(t => <option key={t.type} value={t.type}>{t.label}</option>)}
                 </select>
-              </div>
-              <div>
-                <label style={S.field}>Conversation isolation</label>
-                <select style={S.input} value={dmScope} onChange={e => setDmScope(e.target.value)}>
+              </label>
+              <label className="block space-y-2 text-sm font-medium">
+                会话隔离
+                <select className={selectClass} value={dmScope} onChange={e => setDmScope(e.target.value)}>
                   {DM_SCOPES.map(s => (
                     <option key={s} value={s}>
-                      {s === 'PER_PEER' ? 'Per person (PER_PEER)' : 'Shared inbox (MAIN)'}
+                      {s === 'PER_PEER' ? '按人隔离（PER_PEER）' : '共享收件箱（MAIN）'}
                     </option>
                   ))}
                 </select>
-              </div>
-              <div style={{ gridColumn: '1 / span 2' }}>
-                <label style={S.field}>普通私聊默认 Agent</label>
-                <AgentPicker value={defaultAgentId} onChange={setDefaultAgentId} aria-label="Channel default Agent" />
+              </label>
+              <div className="space-y-2 sm:col-span-2">
+                <span className="block text-sm font-medium">普通私聊默认智能体</span>
+                <AgentPicker value={defaultAgentId} onChange={setDefaultAgentId} aria-label="渠道默认智能体" />
               </div>
             </div>
-            <div style={{ marginTop: 18 }}>
-              <h3 style={{ ...S.sectionTitle, fontSize: '0.95rem', marginBottom: 10 }}>Credentials</h3>
+            <div>
+              <h3 className="mb-2.5 text-sm font-semibold">凭据</h3>
               <PlatformCredentialsForm
                 spec={typeSpec}
                 values={creds}
                 onChange={setCreds}
                 showAdvanced={showAdvanced}
-                onToggleAdvanced={() => setShowAdvanced((v) => !v)}
+                onToggleAdvanced={() => setShowAdvanced(v => !v)}
               />
             </div>
-            {callbackUrl ? (
-              <div style={S.callout}>
-                <strong>Callback / webhook URL</strong>
-                <div style={{ fontFamily: 'monospace', marginTop: 6, wordBreak: 'break-all' }}>{callbackUrl}</div>
-                <div style={{ ...S.subtle, marginTop: 6 }}>Paste this into the platform developer console.</div>
+            {callbackUrl && (
+              <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm">
+                <strong>回调 / Webhook URL</strong>
+                <div className="mt-1.5 break-all font-mono text-xs">{callbackUrl}</div>
+                <div className="mt-1.5 text-xs text-text-3">请粘贴到平台开发者控制台。</div>
               </div>
-            ) : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button style={{ ...S.btn, ...S.btnPrimary }} onClick={() => persist()}>Save configuration</button>
+            )}
+            <div className="flex justify-end">
+              <Button onClick={() => void persist()}>
+                <Save className="h-4 w-4" /> 保存配置
+              </Button>
             </div>
-          </div>
+          </Card>
 
-          <div style={S.section}>
-            <div style={S.sectionHead}>
-              <h2 style={S.sectionTitle}>Transfer rules</h2>
-              <span style={S.subtle}>({bindings.length})</span>
-              <span style={{ flex: 1 }} />
-              <button style={{ ...S.btn, ...S.btnPrimary }} onClick={startAddBinding}>+ Add rule</button>
+          <Card className="space-y-4 p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-base font-semibold">转发规则</h2>
+              <span className="text-sm text-text-3">（{bindings.length}）</span>
+              <span className="flex-1" />
+              <Button onClick={startAddBinding}>
+                <Plus className="h-4 w-4" /> 添加规则
+              </Button>
             </div>
-            <div style={{ ...S.subtle, marginBottom: 12 }}>
-              Route specific peers / groups to another agent. Leave selectors blank for catch-all.
-            </div>
+            <p className="text-sm text-text-3">
+              把指定联系人 / 群组路由到另一个智能体。选择器留空即为兜底。
+            </p>
             {bindings.length === 0 ? (
-              <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-                No rules. Inbound messages route to <code>defaultAgentId</code>.
+              <div className="text-sm text-text-3">
+                暂无规则。入站消息会路由到 <code>defaultAgentId</code>。
               </div>
             ) : bindings.map((b, i) => (
-              <div key={i} style={S.bindingRow}>
-                <span style={{ ...S.badge, background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' }}>
-                  → <AgentIdentity agentId={b.agentId} showId={false} />
-                </span>
-                <span style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.86rem', color: '#475569' }}>
-                  {describe(b)}
-                </span>
-                {b.sessionScope && <span style={S.badge}>{b.sessionScope}</span>}
-                <button style={S.btn} onClick={() => startEditBinding(i)}>Edit</button>
-                <button
-                  style={{ ...S.btn, color: '#dc2626', borderColor: '#fca5a5' }}
-                  onClick={() => deleteBindingAt(i)}
-                >Delete</button>
+              <div key={i} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 p-3.5 text-sm">
+                <Badge tone="info">→ <AgentIdentity agentId={b.agentId} showId={false} /></Badge>
+                <span className="flex-1 break-all font-mono text-xs text-text-2">{describe(b)}</span>
+                {b.sessionScope && <Badge>{b.sessionScope}</Badge>}
+                <Button size="sm" variant="outline" onClick={() => startEditBinding(i)}>编辑</Button>
+                <Button size="sm" variant="outline" className="text-danger-text" onClick={() => void deleteBindingAt(i)}>
+                  <Trash2 className="h-3.5 w-3.5" /> 删除
+                </Button>
               </div>
             ))}
-          </div>
+          </Card>
         </>
       )}
 
@@ -394,7 +369,7 @@ export default function ChannelDetailPage() {
           onSave={saveBinding}
         />
       )}
-    </div>
+    </Page>
   );
 }
 
@@ -407,79 +382,68 @@ interface DialogProps {
 }
 
 function BindingDialog({ form, isNew, onChange, onCancel, onSave }: DialogProps) {
-  const scrim: React.CSSProperties = {
-    position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-    backdropFilter: 'blur(2px)',
-  };
-  const modal: React.CSSProperties = {
-    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16,
-    padding: '28px 30px', width: 620, maxWidth: '92vw',
-    boxShadow: '0 24px 60px rgba(15,23,42,0.18), 0 4px 12px rgba(15,23,42,0.06)',
-  };
-
   return (
-    <div style={scrim} onClick={onCancel}>
-      <div style={modal} onClick={e => e.stopPropagation()}>
-        <h3 style={{ margin: '0 0 16px', fontSize: '1.15rem', color: '#0f172a', fontWeight: 700 }}>
-          {isNew ? 'Add transfer rule' : 'Edit transfer rule'}
-        </h3>
-        <p style={{ ...S.subtle, margin: '0 0 14px' }}>
-          Fill the most-specific selector (e.g. a DingTalk staff id as peer). Leave others blank.
-        </p>
-
-        <div style={S.grid2}>
-          <div>
-            <label style={S.field}>Hand off to agent</label>
-            <AgentPicker
-              value={form.agentId}
-              onChange={agentId => onChange({ ...form, agentId })}
-              required
-              aria-label="Transfer target Agent"
-            />
+    <Dialog open onOpenChange={open => { if (!open) onCancel(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{isNew ? '添加转发规则' : '编辑转发规则'}</DialogTitle>
+          <DialogDescription>
+            填写最具体的选择器（例如钉钉员工 ID 作为 peer），其余留空。
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <span className="block text-sm font-medium">转交给智能体</span>
+              <AgentPicker
+                value={form.agentId}
+                onChange={agentId => onChange({ ...form, agentId })}
+                required
+                aria-label="转发目标智能体"
+              />
+            </div>
+            <label className="block space-y-2 text-sm font-medium">
+              隔离覆盖
+              <select
+                className={selectClass}
+                value={form.sessionScope}
+                onChange={e => onChange({ ...form, sessionScope: e.target.value })}
+              >
+                <option value="">— 继承渠道设置 —</option>
+                {DM_SCOPES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              peer（例如 direct:staffId）
+              <Input value={form.peer} onChange={e => onChange({ ...form, peer: e.target.value })} />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              parentPeer
+              <Input value={form.parentPeer} onChange={e => onChange({ ...form, parentPeer: e.target.value })} />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              guild
+              <Input value={form.guild} onChange={e => onChange({ ...form, guild: e.target.value })} />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              roles（逗号分隔）
+              <Input value={form.roles} onChange={e => onChange({ ...form, roles: e.target.value })} />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              team
+              <Input value={form.team} onChange={e => onChange({ ...form, team: e.target.value })} />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              account
+              <Input value={form.account} onChange={e => onChange({ ...form, account: e.target.value })} />
+            </label>
           </div>
-          <div>
-            <label style={S.field}>Isolation override</label>
-            <select
-              style={S.input}
-              value={form.sessionScope}
-              onChange={e => onChange({ ...form, sessionScope: e.target.value })}
-            >
-              <option value="">— inherit channel —</option>
-              {DM_SCOPES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+          <div className="mt-6 flex justify-end gap-2 border-t border-border pt-4">
+            <Button variant="ghost" onClick={onCancel}>取消</Button>
+            <Button onClick={onSave} disabled={!form.agentId.trim()}>{isNew ? '创建' : '保存'}</Button>
           </div>
-          <div>
-            <label style={S.field}>peer (e.g. direct:staffId)</label>
-            <input style={S.input} value={form.peer} onChange={e => onChange({ ...form, peer: e.target.value })} />
-          </div>
-          <div>
-            <label style={S.field}>parentPeer</label>
-            <input style={S.input} value={form.parentPeer} onChange={e => onChange({ ...form, parentPeer: e.target.value })} />
-          </div>
-          <div>
-            <label style={S.field}>guild</label>
-            <input style={S.input} value={form.guild} onChange={e => onChange({ ...form, guild: e.target.value })} />
-          </div>
-          <div>
-            <label style={S.field}>roles (comma-separated)</label>
-            <input style={S.input} value={form.roles} onChange={e => onChange({ ...form, roles: e.target.value })} />
-          </div>
-          <div>
-            <label style={S.field}>team</label>
-            <input style={S.input} value={form.team} onChange={e => onChange({ ...form, team: e.target.value })} />
-          </div>
-          <div>
-            <label style={S.field}>account</label>
-            <input style={S.input} value={form.account} onChange={e => onChange({ ...form, account: e.target.value })} />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-          <button style={S.btn} onClick={onCancel}>Cancel</button>
-          <button style={{ ...S.btn, ...S.btnPrimary }} onClick={onSave}>{isNew ? 'Create' : 'Save'}</button>
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

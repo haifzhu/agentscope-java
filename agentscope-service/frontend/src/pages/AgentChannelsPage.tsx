@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { Plug, Plus, Settings2, Trash2 } from 'lucide-react';
 import {
   AgentPresence,
   ChannelTypeSpec,
@@ -32,41 +33,21 @@ import PlatformCredentialsForm, {
   propertiesFromCredentials,
 } from '../components/PlatformCredentialsForm';
 import ChannelBindingTable from '../components/ChannelBindingTable';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
-const S: Record<string, React.CSSProperties> = {
-  root: { padding: '28px 32px', maxWidth: 1100 },
-  title: { margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 700, color: '#0f172a' },
-  subtle: { color: '#64748b', fontSize: '0.92rem', marginBottom: 20 },
-  section: {
-    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14,
-    padding: '20px 22px', marginBottom: 16,
-    boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
-  },
-  row: {
-    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-    borderRadius: 10, border: '1px solid #f1f5f9', background: '#f8fafc', marginBottom: 8,
-  },
-  badge: {
-    padding: '3px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600,
-    background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0',
-  },
-  btn: {
-    padding: '8px 16px', fontSize: '0.86rem', fontWeight: 500, borderRadius: 8, cursor: 'pointer',
-    border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569',
-  },
-  btnPrimary: {
-    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)',
-    color: '#ffffff', border: 'none',
-  },
-  err: { color: '#dc2626', fontSize: '0.9rem', marginTop: 8 },
-  field: { display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: 6, fontWeight: 500 },
-  input: {
-    width: '100%', boxSizing: 'border-box', padding: '10px 12px',
-    background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 8,
-    color: '#0f172a', fontSize: '0.92rem',
-  },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
-};
+const selectClass =
+  'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm disabled:opacity-60';
 
 export default function AgentChannelsPage() {
   const { agentId } = useOutletContext<{ agentId: string }>();
@@ -90,56 +71,53 @@ export default function AgentChannelsPage() {
   useEffect(() => { void load(); /* eslint-disable-next-line */ }, [agentId]);
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <h1 style={S.title}>Channels</h1>
-      <p style={S.subtle}>
-        Connect chat platforms or webhook providers whose default target is this logical Agent.
-        Channel routing never binds to an individual runtime instance.
-      </p>
+    <div className="space-y-6">
+      {err && (
+        <div role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger-text">{err}</div>
+      )}
 
-      {err && <div style={S.err}>{err}</div>}
-
-      <div style={S.section}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Default channels</h2>
-          <span style={{ flex: 1 }} />
-          <button style={{ ...S.btn, ...S.btnPrimary }} onClick={() => setShowCreate(true)}>
-            + Connect channel
-          </button>
+      <Card className="space-y-4 p-5">
+        <div className="flex items-center gap-3">
+          <h2 className="flex-1 text-base font-semibold">默认渠道</h2>
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" /> 连接渠道
+          </Button>
         </div>
+        <p className="text-sm text-text-3">
+          连接默认路由到该逻辑智能体的聊天平台或 Webhook 提供方。渠道路由不会绑定到单个运行时实例。
+        </p>
 
         {presences.length === 0 ? (
-          <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-            No channel targets this Agent by default. Connect one here or add a routing rule from the Channels catalog.
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-text-3">
+            <Plug className="mx-auto mb-2 h-6 w-6 text-text-3" />
+            暂无渠道默认指向该智能体。可在此连接一个，或在渠道目录中添加路由规则。
           </div>
         ) : (
-          presences.map((p) => {
-            const spec = types.find((t) => t.type === p.platform);
+          presences.map(p => {
+            const spec = types.find(t => t.type === p.platform);
             const cb = p.callbackUrl
               ? (typeof window !== 'undefined' ? `${window.location.origin}${p.callbackUrl}` : p.callbackUrl)
               : resolveCallbackUrl(spec, p.channelId);
             return (
-              <div key={p.channelId} style={S.row}>
-                <span style={{ fontWeight: 600, flex: 1 }}>{p.channelId}</span>
-                <span style={S.badge}>{spec?.label ?? p.platform}</span>
-                <span style={S.badge}>
-                  {p.isolation === 'shared' ? 'shared inbox' : 'per person'}
-                </span>
-                <span style={{
-                  ...S.badge,
-                  background: p.started ? '#dcfce7' : '#f1f5f9',
-                  color: p.started ? '#166534' : '#475569',
-                }}>
-                  {p.enabled ? (p.started ? 'connected' : 'stopped') : 'disabled'}
-                </span>
-                <Link style={{ ...S.btn, textDecoration: 'none' }} to={`/agent-center/entrypoints/${encodeURIComponent(p.channelId)}`}>
-                  Advanced
-                </Link>
-                <button style={S.btn} onClick={() => setEdit(p)}>Edit</button>
-                <button
-                  style={{ ...S.btn, color: '#dc2626', borderColor: '#fca5a5' }}
+              <div key={p.channelId} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 p-4">
+                <span className="flex-1 truncate text-sm font-semibold">{p.channelId}</span>
+                <Badge>{spec?.label ?? p.platform}</Badge>
+                <Badge>{p.isolation === 'shared' ? '共享收件箱' : '按人隔离'}</Badge>
+                <Badge tone={p.started ? 'success' : 'default'}>
+                  {p.enabled ? (p.started ? '已连接' : '已停止') : '已停用'}
+                </Badge>
+                <Button asChild size="sm" variant="outline">
+                  <Link to={`/agent-center/entrypoints/${encodeURIComponent(p.channelId)}`}>
+                    <Settings2 className="h-3.5 w-3.5" /> 高级设置
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEdit(p)}>编辑</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-danger-text"
                   onClick={async () => {
-                    if (!confirm(`Disconnect ${p.channelId}?`)) return;
+                    if (!confirm(`确认断开 ${p.channelId}？`)) return;
                     try {
                       await deleteAgentPresence(agentId, p.channelId);
                       await load();
@@ -148,21 +126,19 @@ export default function AgentChannelsPage() {
                     }
                   }}
                 >
-                  Disconnect
-                </button>
-                {cb ? (
-                  <div style={{ width: '100%', fontSize: '0.78rem', color: '#64748b', fontFamily: 'monospace' }}>
-                    {cb}
-                  </div>
-                ) : null}
-                {p.lastError ? (
-                  <div style={{ width: '100%', fontSize: '0.78rem', color: '#dc2626' }}>{p.lastError}</div>
-                ) : null}
+                  <Trash2 className="h-3.5 w-3.5" /> 断开
+                </Button>
+                {cb && (
+                  <div className="w-full break-all font-mono text-xs text-text-3">{cb}</div>
+                )}
+                {p.lastError && (
+                  <div className="w-full break-all text-xs text-danger-text">{p.lastError}</div>
+                )}
               </div>
             );
           })
         )}
-      </div>
+      </Card>
 
       {(showCreate || edit) && (
         <PresenceDialog
@@ -178,9 +154,9 @@ export default function AgentChannelsPage() {
         />
       )}
 
-      <div style={{ marginTop: 28 }}>
-        <h2 style={{ fontSize: '1.05rem', marginBottom: 8 }}>Transfer rules (advanced)</h2>
-        <p style={S.subtle}>Inspect rules that route selected peers, groups, or events to this logical Agent.</p>
+      <div className="space-y-3">
+        <h2 className="text-base font-semibold">转发规则（高级）</h2>
+        <p className="text-sm text-text-3">查看把指定联系人、群组或事件路由到该逻辑智能体的规则。</p>
         <ChannelBindingTable agentId={agentId} />
       </div>
     </div>
@@ -207,10 +183,10 @@ function PresenceDialog({
     initial?.isolation ?? 'per_person',
   );
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
-  const typeSpec = useMemo(() => types.find((t) => t.type === platform), [types, platform]);
+  const typeSpec = useMemo(() => types.find(t => t.type === platform), [types, platform]);
   const [creds, setCreds] = useState<Record<string, string>>(() =>
     credentialsFromProperties(
-      types.find((t) => t.type === (initial?.platform ?? types[0]?.type)),
+      types.find(t => t.type === (initial?.platform ?? types[0]?.type)),
       initial?.credentials,
     ),
   );
@@ -221,7 +197,7 @@ function PresenceDialog({
   function onPlatformChange(next: string) {
     if (isEdit) return;
     setPlatform(next);
-    setCreds(credentialsFromProperties(types.find((t) => t.type === next), undefined));
+    setCreds(credentialsFromProperties(types.find(t => t.type === next), undefined));
     if (!channelId || channelId.startsWith((platform || '') + '-')) {
       setChannelId(`${next}-${agentId}`);
     }
@@ -251,84 +227,79 @@ function PresenceDialog({
     }
   }
 
-  const scrim: React.CSSProperties = {
-    position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-  };
-  const modal: React.CSSProperties = {
-    background: '#fff', borderRadius: 16, padding: 28, width: 680, maxWidth: '92vw',
-    maxHeight: '90vh', overflow: 'auto',
-  };
-
   return (
-    <div style={scrim} onClick={onClose}>
-      <div style={modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>{isEdit ? 'Edit channel' : 'Connect channel'}</h3>
-        <div style={S.grid2}>
-          <div>
-            <label style={S.field}>Platform</label>
-            <select
-              style={S.input}
-              value={platform}
-              disabled={isEdit}
-              onChange={(e) => onPlatformChange(e.target.value)}
-            >
-              {types.map((t) => (
-                <option key={t.type} value={t.type}>{t.label}</option>
-              ))}
-            </select>
+    <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? '编辑渠道' : '连接渠道'}</DialogTitle>
+          <DialogDescription>选择平台、隔离方式并配置凭据。</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-2 text-sm font-medium">
+              平台
+              <select
+                className={selectClass}
+                value={platform}
+                disabled={isEdit}
+                onChange={e => onPlatformChange(e.target.value)}
+              >
+                {types.map(t => (
+                  <option key={t.type} value={t.type}>{t.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              渠道 ID
+              <Input
+                value={channelId}
+                disabled={isEdit}
+                onChange={e => setChannelId(e.target.value)}
+                placeholder={`${platform || 'dingtalk'}-${agentId}`}
+              />
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              会话隔离
+              <select
+                className={selectClass}
+                value={isolation}
+                onChange={e => setIsolation(e.target.value as 'per_person' | 'shared')}
+              >
+                <option value="per_person">按人隔离 —— 每个联系人独立记忆</option>
+                <option value="shared">共享收件箱 —— 所有人共用一个会话</option>
+              </select>
+            </label>
+            <label className="block space-y-2 text-sm font-medium">
+              是否启用
+              <select
+                className={selectClass}
+                value={enabled ? 'yes' : 'no'}
+                onChange={e => setEnabled(e.target.value === 'yes')}
+              >
+                <option value="yes">启用</option>
+                <option value="no">停用</option>
+              </select>
+            </label>
           </div>
-          <div>
-            <label style={S.field}>Channel id</label>
-            <input
-              style={S.input}
-              value={channelId}
-              disabled={isEdit}
-              onChange={(e) => setChannelId(e.target.value)}
-              placeholder={`${platform || 'dingtalk'}-${agentId}`}
+          <div className="mt-4">
+            <span className="mb-2 block text-sm font-medium">凭据</span>
+            <PlatformCredentialsForm
+              spec={typeSpec}
+              values={creds}
+              onChange={setCreds}
+              showAdvanced={showAdvanced}
+              onToggleAdvanced={() => setShowAdvanced(v => !v)}
             />
           </div>
-          <div>
-            <label style={S.field}>Conversation isolation</label>
-            <select
-              style={S.input}
-              value={isolation}
-              onChange={(e) => setIsolation(e.target.value as 'per_person' | 'shared')}
-            >
-              <option value="per_person">Per person — each chatter has their own memory</option>
-              <option value="shared">Shared inbox — everyone shares one conversation</option>
-            </select>
+          {err && <p role="alert" className="mt-3 text-sm text-danger-text">{err}</p>}
+          <div className="mt-6 flex justify-end gap-2 border-t border-border pt-4">
+            <Button variant="ghost" onClick={onClose} disabled={busy}>取消</Button>
+            <Button onClick={save} disabled={busy}>
+              {busy ? '保存中…' : isEdit ? '保存' : '连接'}
+            </Button>
           </div>
-          <div>
-            <label style={S.field}>Enabled</label>
-            <select
-              style={S.input}
-              value={enabled ? 'yes' : 'no'}
-              onChange={(e) => setEnabled(e.target.value === 'yes')}
-            >
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <label style={S.field}>Credentials</label>
-          <PlatformCredentialsForm
-            spec={typeSpec}
-            values={creds}
-            onChange={setCreds}
-            showAdvanced={showAdvanced}
-            onToggleAdvanced={() => setShowAdvanced((v) => !v)}
-          />
-        </div>
-        {err && <div style={S.err}>{err}</div>}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 20 }}>
-          <button style={S.btn} onClick={onClose} disabled={busy}>Cancel</button>
-          <button style={{ ...S.btn, ...S.btnPrimary }} onClick={save} disabled={busy}>
-            {busy ? 'Saving…' : isEdit ? 'Save' : 'Connect'}
-          </button>
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }
