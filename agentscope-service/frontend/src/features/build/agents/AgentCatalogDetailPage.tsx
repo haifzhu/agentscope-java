@@ -244,8 +244,22 @@ export default function AgentCatalogDetailPage() {
     Object.entries(options).forEach(([key, value]) => {
       if (key !== "section") query.set(key, value);
     });
-    navigate(scope.scopedPath(`${base}${query.size ? `?${query}` : ""}`));
+    // C7 修复：定义分区内容挂在内层 /definition 路由上，导航必须带上该段，
+    // 否则 Outlet 无匹配子路由，内容区为空。
+    const target = next === "definition" ? `${base}/definition` : base;
+    navigate(scope.scopedPath(`${target}${query.size ? `?${query}` : ""}`));
   };
+  // 兼容旧链接（仅 ?tab=definition 无路径段）：重定向到内层路由，保证内容可渲染。
+  useEffect(() => {
+    if (tab === "definition" && !location.pathname.endsWith("/definition")) {
+      const query = new URLSearchParams(params);
+      query.set("tab", "definition");
+      if (!query.get("section")) query.set("section", "behavior");
+      navigate(scope.scopedPath(`${base}/definition?${query.toString()}`), {
+        replace: true,
+      });
+    }
+  }, [base, location.pathname, navigate, params, scope, tab]);
   useEffect(() => {
     setRegistrationCredential("");
     setShareOpen(false);

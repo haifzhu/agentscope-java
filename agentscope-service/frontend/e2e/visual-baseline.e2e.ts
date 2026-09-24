@@ -87,8 +87,50 @@ const PAGES: Array<{ id: string; path: string; assert: (page: Page) => Promise<u
   // C6 智能体定义（横向标签，不再有第三层）
   {
     id: 'agent-definition',
-    path: '/agent-center/agents/worker?tab=definition&section=behavior',
+    path: '/agent-center/agents/worker/definition?tab=definition&section=behavior',
     assert: page => expect(page.getByRole('navigation', { name: '智能体定义' })).toBeVisible(),
+  },
+  // C7 定义「版本」分区：版本历史 + 版本对比
+  {
+    id: 'agent-versions',
+    path: '/agent-center/agents/worker/definition?tab=definition&section=versions',
+    assert: page => expect(page.getByRole('heading', { name: '版本对比' })).toBeVisible(),
+  },
+  // C8 执行记录（三层钻取入口，失败折叠高亮）
+  {
+    id: 'executions',
+    path: '/work/executions',
+    assert: page => expect(page.getByRole('heading', { name: '执行记录' })).toBeVisible(),
+  },
+  // C8/C12 运行详情（执行路径图）
+  {
+    id: 'run-tracking',
+    path: '/work/executions/run-1',
+    assert: page => expect(page.getByRole('heading', { name: '执行路径' })).toBeVisible(),
+  },
+  // C9 会话运维
+  {
+    id: 'sessions-ops',
+    path: '/work/sessions',
+    assert: page => expect(page.getByRole('heading', { name: '会话运维' })).toBeVisible(),
+  },
+  // C10 团队编排（执行限额折叠 + 配置摘要）
+  {
+    id: 'team-limits',
+    path: '/agent-center/teams/team-1?tab=orchestration&section=limits',
+    assert: page => expect(page.getByText('配置摘要')).toBeVisible(),
+  },
+  // C11 工作流设计器（缩放/拖拽/自动布局 + 实时校验）
+  {
+    id: 'workflow-designer',
+    path: '/agent-center/workflows/wf-1?tab=design',
+    assert: page => expect(page.getByRole('group', { name: '画布缩放' })).toBeVisible(),
+  },
+  // C13 API 端点一屏总览（四张卡）
+  {
+    id: 'endpoint-overview',
+    path: '/agent-center/endpoints/ep-1',
+    assert: page => expect(page.getByRole('heading', { name: '凭据与安全' })).toBeVisible(),
   },
 ];
 

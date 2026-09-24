@@ -121,7 +121,7 @@ export default function OperateSessionsPage() {
         <label className="grid gap-1 text-sm">
           <span className="text-muted-foreground">智能体</span>
           <select
-            className="h-10 min-w-[10rem] rounded-lg border border-border bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 min-w-[10rem] rounded-lg border border-border bg-surface px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={agent}
             onChange={(e) => updateAgent(e.target.value)}
           >
@@ -137,7 +137,7 @@ export default function OperateSessionsPage() {
         <label className="grid gap-1 text-sm">
           <span className="text-muted-foreground">状态</span>
           <select
-            className="h-10 min-w-[9rem] rounded-lg border border-border bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 min-w-[9rem] rounded-lg border border-border bg-surface px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={phase}
             onChange={(e) => updatePhase(e.target.value)}
           >

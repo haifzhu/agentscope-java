@@ -386,7 +386,7 @@ export default function OperateSessionDetailPage() {
           ) : !canQueryContext(capabilities) ? (
             <p className="text-sm text-muted-foreground">该运行时未提供上下文查看能力。</p>
           ) : context.isError ? (
-            <p className="text-sm text-red-600">上下文加载失败。</p>
+            <p className="text-sm text-danger-text">上下文加载失败。</p>
           ) : context.isLoading || (context.isFetching && !context.data) ? (
             <p className="text-sm text-muted-foreground">加载中…</p>
           ) : !context.data || !ctxSummary ? (

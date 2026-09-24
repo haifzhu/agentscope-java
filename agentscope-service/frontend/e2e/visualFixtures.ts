@@ -102,6 +102,92 @@ export async function mockVisualApi(page: Page, roles: string[] = ['admin']) {
     if (path.endsWith('/agent-instances')) return json({ items: [] });
     if (path.endsWith('/agent-tasks') || path.endsWith('/agent-sessions')) return json({ items: [] });
 
+    // ---- JICH-340 阶段 C 第二批（C7–C13）视觉基线数据 ----
+
+    // C7 版本历史 + 版本对比
+    if (path === `/api/v1/agents/${AGENT_ID}/versions`) return json({ versions: [
+      { version: 3, snapshot: { name: '评审助手', model: 'dashscope:qwen-max', system: '你是评审助手。', maxIters: 12 }, createdAt: hoursAgo(1) },
+      { version: 2, snapshot: { name: '评审助手', model: 'dashscope:qwen-plus', system: '你是评审助手。', maxIters: 8 }, createdAt: hoursAgo(26) },
+      { version: 1, snapshot: { name: '评审助手', model: 'dashscope:qwen-plus', system: '初版提示词', maxIters: 8 }, createdAt: hoursAgo(72) },
+    ] });
+    const versionMatch = path.match(/\/agents\/[^/]+\/versions\/(\d+)$/);
+    if (versionMatch) {
+      const snapshots: Record<string, Record<string, unknown>> = {
+        1: { name: '评审助手', model: 'dashscope:qwen-plus', system: '初版提示词', maxIters: 8 },
+        2: { name: '评审助手', model: 'dashscope:qwen-plus', system: '你是评审助手。', maxIters: 8 },
+        3: { name: '评审助手', model: 'dashscope:qwen-max', system: '你是评审助手。', maxIters: 12 },
+      };
+      return json({ version: { version: Number(versionMatch[1]), snapshot: snapshots[versionMatch[1]], createdAt: hoursAgo(2) } });
+    }
+
+    // C8 执行记录：运行时尝试
+    if (path === '/api/v1/execution-attempts') return json({ attempts: [
+      { id: 'att-1', tenant: 'default', namespace: 'default', agentTaskId: 'task-1', backendKind: 'sandbox', attempt: 1, state: 'failed', hostId: 'host-1', startedAt: hoursAgo(2), createdAt: hoursAgo(2) },
+    ] });
+
+    // C9 会话运维
+    if (path === '/api/v1/agents' && url.searchParams.get('presence')) return json({ items: [{ id: AGENT_ID, agentKey: AGENT_ID, name: '评审助手', displayName: '评审助手', status: 'active', runtimeKind: 'managed', tenant: 'default', namespace: 'default' }] });
+    if (path === '/api/v1/sessions') return json({ sessions: [
+      { id: 's-1', sessionId: 'sess-9f31', agentName: '评审助手', agentId: AGENT_ID, namespace: 'default', framework: 'agent_scope_java', phase: 'idle', startedAt: hoursAgo(5), lastActiveAt: hoursAgo(1), snapshot: { contextPressure: 0.42, effectiveMessageCount: 18 } },
+      { id: 's-2', sessionId: 'sess-a0b2', agentName: '评审助手', agentId: AGENT_ID, namespace: 'default', framework: 'agent_scope_java', phase: 'active', busy: true, startedAt: hoursAgo(1), lastActiveAt: hoursAgo(0.1), snapshot: { contextPressure: 0.78, effectiveMessageCount: 44 } },
+    ] });
+
+    // C10 团队编排：限额折叠 + 配置摘要
+    if (path === '/api/v1/teams/team-1/overview') return json({ team: {
+      id: 'team-1', tenant: 'default', namespace: 'default', name: '评审机器人组', description: '负责评审与验收的常驻团队。', instructions: '按评审清单执行，结果需附证据。', status: 'active', leaderAgentId: AGENT_ID,
+      members: [{ id: 'm-1', teamId: 'team-1', agentId: 'reviewer-2', role: 'worker', instructions: '执行静态检查' }],
+      policy: { maxHops: 5, maxFanout: 10 }, version: 3, createdAt: hoursAgo(80), updatedAt: hoursAgo(9),
+    }, overview: {
+      teamId: 'team-1', observedAt: hoursAgo(0.1), readiness: 'ready', reason: '成员全部就绪',
+      members: [
+        { agentId: AGENT_ID, role: 'lead', leader: true, readiness: { state: 'ready', reason: 'ok' } },
+        { agentId: 'reviewer-2', role: 'worker', leader: false, readiness: { state: 'ready', reason: 'ok' } },
+      ],
+      runs: { total: 12, activeTasks: 1 }, endpoints: { total: 1, published: 1 },
+    } });
+
+    // C11 工作流设计器 / C12 运行追踪
+    const wfSpec = { nodes: [
+      { key: 'start-review', type: 'agent', agentId: AGENT_ID, issueMode: 'inherit', failurePolicy: 'fail_fast' },
+      { key: 'needs-approval', type: 'condition', issueMode: 'inherit', failurePolicy: 'fail_fast' },
+      { key: 'human-approval', type: 'approval', issueMode: 'inherit', failurePolicy: 'fail_fast', approval: { approverRef: 'alice', prompt: '请审批发布' } },
+      { key: 'merge', type: 'join', issueMode: 'inherit', failurePolicy: 'fail_fast', join: { mode: 'all' } },
+    ], edges: [
+      { from: 'start-review', to: 'needs-approval', on: ['succeeded'] },
+      { from: 'needs-approval', to: 'human-approval', on: ['succeeded'] },
+      { from: 'human-approval', to: 'merge', on: ['succeeded'] },
+    ] };
+    if (path === '/api/v1/orchestration-definitions/wf-1') return json({ definition: { id: 'wf-1', tenant: 'default', namespace: 'default', name: '发布校验流', draftSpec: wfSpec, draftVersion: 2, version: 2, createdAt: hoursAgo(20), updatedAt: hoursAgo(10) } });
+    if (path === '/api/v1/orchestration-definitions/wf-1/revisions') return json({ revisions: [{ id: 'rev-1', definitionId: 'wf-1', revision: 1, name: '发布校验流 r1', spec: wfSpec, createdAt: hoursAgo(12) }] });
+    if (path === '/api/v1/orchestration-runs/run-1' || path === '/api/v1/orchestration-runs/run-1/graph') {
+      const graph = {
+        run: runs[0],
+        definition: { id: 'wf-1', tenant: 'default', namespace: 'default', name: '发布校验流', draftSpec: wfSpec, draftVersion: 2, version: 2, createdAt: hoursAgo(20), updatedAt: hoursAgo(10) },
+        revision: { id: 'rev-1', definitionId: 'wf-1', revision: 1, name: '发布校验流 r1', createdAt: hoursAgo(12) },
+        nodes: [
+          { id: 'n-1', nodeKey: 'start-review', type: 'agent', state: 'succeeded', startedAt: hoursAgo(2) },
+          { id: 'n-2', nodeKey: 'needs-approval', type: 'condition', state: 'succeeded', startedAt: hoursAgo(2) },
+          { id: 'n-3', nodeKey: 'human-approval', type: 'approval', state: 'waiting', startedAt: hoursAgo(1.5) },
+        ],
+        edges: [
+          { id: 'e-1', fromNodeId: 'n-1', toNodeId: 'n-2', onStates: ['succeeded'] },
+          { id: 'e-2', fromNodeId: 'n-2', toNodeId: 'n-3', onStates: ['succeeded'] },
+        ],
+        tasks: [{ id: 'task-1', agentId: AGENT_ID, status: 'failed', runNodeId: 'n-1' }],
+        attempts: [],
+        childRuns: [],
+      };
+      return path.endsWith('/graph') ? json(graph) : json({ run: runs[0] });
+    }
+    if (path === '/api/v1/orchestration-runs/run-1/events') return json({ events: [] });
+
+    // C13 API 端点
+    if (path === '/api/v1/endpoints/ep-1') return json({ endpoint: { id: 'ep-1', tenant: 'default', namespace: 'default', name: '评审结果查询', slug: 'review-result', description: '查询评审结论的稳定公开 API。', targetType: 'agent', targetRef: AGENT_ID, invocationMode: 'conversation', eventSchemaVersion: 'v1', timeoutSeconds: 300, maxPayloadBytes: 1048576, authPolicy: { type: 'api_key' }, rateLimit: { requests: 60, windowSeconds: 60 }, activeReleaseId: 'rel-1', activeRelease: 1, status: 'published', version: 2, createdAt: hoursAgo(60), updatedAt: hoursAgo(10) } });
+    if (path === '/api/v1/endpoints/ep-1/readiness') return json({ readiness: { state: 'ready', reason: '目标智能体在线', compatible: true } });
+    if (path === '/api/v1/endpoints/ep-1/credentials') return json({ items: [{ id: 'cred-1', endpointId: 'ep-1', name: '默认调用凭据', keyPrefix: 'k3f9', status: 'active', createdAt: hoursAgo(60), lastUsedAt: hoursAgo(1) }] });
+    if (path === '/api/v1/endpoints/ep-1/invocations') return json({ items: [{ id: 'inv-1', endpointId: 'ep-1', status: 'completed', correlationId: 'corr-1', createdAt: hoursAgo(1) }] });
+    if (path === '/api/v1/endpoints/ep-1/releases') return json({ items: [{ id: 'rel-1', endpointId: 'ep-1', number: 1, targetType: 'agent', targetRef: AGENT_ID, reason: 'initial publish', activatedAt: hoursAgo(58) }] });
+
     if (path.endsWith('/events/stream')) return route.fulfill({ contentType: 'text/event-stream', body: '' });
     return json({ items: [], summary: {} });
   });

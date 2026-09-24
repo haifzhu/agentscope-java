@@ -46,6 +46,20 @@ const CONTRACT_ENFORCED = [
   'src/features/issues/IssueDetailPage.tsx',
   'src/features/issues/IssueSharing.tsx',
   'src/features/issues/IssueAcceptanceEditor.tsx',
+  // JICH-340 阶段 C 第二批（C7–C13）：以下域已完成令牌化，回归即报错
+  'src/components/AgentSettingsForm.tsx',
+  'src/features/build/agents/AgentVersionsPanel.tsx',
+  'src/features/build/agents/AgentDefinitionPanel.tsx',
+  'src/features/operate/ExecutionsPage.tsx',
+  'src/features/operate/OperateSessionsPage.tsx',
+  'src/features/operate/OperateSessionDetailPage.tsx',
+  'src/features/tasks/TasksPage.tsx',
+  'src/features/teams/TeamConfiguration.tsx',
+  'src/features/teams/TeamsOverviewPage.tsx',
+  'src/features/orchestration/WorkflowDesigner.tsx',
+  'src/features/orchestration/WorkflowGraph.tsx',
+  'src/features/orchestration/WorkflowExecution.tsx',
+  'src/features/build/deployments/EndpointDetailPage.tsx',
 ];
 
 export default tseslint.config(
