@@ -20,6 +20,6 @@ import { useAccountIdentity } from '@/lib/accountIdentity';
 
 export default function ManagementLayout() {
   useAccountIdentity();
-  const links = [{ to: '/settings/namespaces', label: 'Namespaces' }, ...(isAdmin() ? [{ to: '/settings/users', label: 'Users' }, { to: '/settings/access-log', label: 'Access log' }, { to: '/settings/integrations', label: 'Integrations' }] : [])];
-  return <div className="min-h-full bg-white"><div className="border-b px-5 pt-5 sm:px-8 lg:px-10"><p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Namespaces & access</p><nav aria-label="Access settings" className="mt-3 flex gap-6 overflow-x-auto">{links.map(link => <NavLink key={link.to} to={link.to} className={({ isActive }) => `whitespace-nowrap border-b-2 pb-3 text-sm font-medium ${isActive ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-900'}`}>{link.label}</NavLink>)}</nav></div><Outlet /></div>;
+  const links = [{ to: '/settings/namespaces', label: '命名空间' }, ...(isAdmin() ? [{ to: '/settings/users', label: '用户' }, { to: '/settings/access-log', label: '访问日志' }, { to: '/settings/integrations', label: '集成' }] : [])];
+  return <div className="min-h-full bg-surface"><div className="border-b px-5 pt-5 sm:px-8 lg:px-10"><p className="text-xs font-semibold uppercase tracking-wider text-text-3">命名空间与访问</p><nav aria-label="访问设置" className="mt-3 flex gap-6 overflow-x-auto">{links.map(link => <NavLink key={link.to} to={link.to} className={({ isActive }) => `whitespace-nowrap border-b-2 pb-3 text-sm font-medium ${isActive ? 'border-primary text-primary-text' : 'border-transparent text-text-3 hover:text-text'}`}>{link.label}</NavLink>)}</nav></div><Outlet /></div>;
 }
