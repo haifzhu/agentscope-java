@@ -1,22 +1,6 @@
-/*
- * Copyright 2024-2026 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { useState, useId, type FormEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plus, Trash2, Clock3, Webhook } from "lucide-react";
+import { Plus, Trash2, Clock3, Webhook, Check } from "lucide-react";
 import {
   createAutomation,
   updateAutomation,
@@ -47,7 +31,50 @@ import {
 } from "./form";
 
 const selectClass =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm";
+  "h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm";
+
+/** 四步向导（PRD 5.12）：基本信息 → 执行者与产出 → 触发器 → 高级与确认。 */
+const WIZARD_STEPS = [
+  { title: "基本信息", hint: "名称与运行手册" },
+  { title: "执行者与产出", hint: "交给谁、结果去哪" },
+  { title: "触发器", hint: "定时或 Webhook" },
+  { title: "高级与确认", hint: "并发、超时与启用" },
+] as const;
+
+function StepIndicator({ step }: { step: number }) {
+  return (
+    <ol className="flex flex-wrap items-center gap-2 border-b border-border px-6 py-3">
+      {WIZARD_STEPS.map((s, i) => {
+        const state = i === step ? "current" : i < step ? "done" : "todo";
+        return (
+          <li key={s.title} className="flex items-center gap-2">
+            <span
+              aria-current={state === "current" ? "step" : undefined}
+              className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-medium ${
+                state === "current"
+                  ? "border-primary bg-primary-soft text-primary-text"
+                  : state === "done"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-text-3"
+              }`}
+            >
+              {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
+            </span>
+            <span
+              className={`text-xs ${state === "current" ? "font-medium text-text" : "text-text-3"}`}
+            >
+              {s.title}
+            </span>
+            {i < WIZARD_STEPS.length - 1 && (
+              <span className="mx-1 h-px w-6 bg-border" aria-hidden />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function TriggerEditor({
   trigger,
   onChange,
@@ -71,7 +98,7 @@ function TriggerEditor({
     staleTime: 10000,
   });
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+    <div className="space-y-3 rounded-xl border border-border bg-surface-2 p-4">
       <div className="flex items-center gap-2">
         {trigger.type === "cron" ? (
           <Clock3 className="h-4 w-4" />
@@ -79,7 +106,7 @@ function TriggerEditor({
           <Webhook className="h-4 w-4" />
         )}
         <span className="flex-1 text-sm font-medium">
-          {trigger.type === "cron" ? "Schedule" : "Webhook"}
+          {trigger.type === "cron" ? "定时计划" : "Webhook"}
         </span>
         <label className="flex items-center gap-1 text-xs">
           <input
@@ -89,13 +116,13 @@ function TriggerEditor({
               onChange({ ...trigger, enabled: e.target.checked })
             }
           />{" "}
-          Enabled
+          启用
         </label>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          aria-label="Remove trigger"
+          aria-label="移除触发器"
           onClick={onRemove}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -104,9 +131,9 @@ function TriggerEditor({
       {trigger.type === "cron" ? (
         <>
           <label className="block space-y-1 text-xs">
-            Frequency
+            常用频率
             <select
-              aria-label="Schedule preset"
+              aria-label="常用频率"
               className={selectClass}
               value={
                 [
@@ -123,17 +150,17 @@ function TriggerEditor({
                   onChange({ ...trigger, schedule: e.target.value });
               }}
             >
-              <option value="0 9 * * 1-5">Weekdays at 09:00</option>
-              <option value="0 9 * * *">Every day at 09:00</option>
-              <option value="0 * * * *">Every hour</option>
-              <option value="*/30 * * * *">Every 30 minutes</option>
-              <option value="custom">Custom schedule</option>
+              <option value="0 9 * * 1-5">工作日每天 09:00</option>
+              <option value="0 9 * * *">每天 09:00</option>
+              <option value="0 * * * *">每小时</option>
+              <option value="*/30 * * * *">每 30 分钟</option>
+              <option value="custom">自定义计划</option>
             </select>
           </label>
           <label className="block space-y-1 text-xs">
-            Cron expression
+            Cron 表达式
             <Input
-              aria-label="Cron expression"
+              aria-label="Cron 表达式"
               value={trigger.schedule || ""}
               onChange={(e) =>
                 onChange({ ...trigger, schedule: e.target.value })
@@ -143,9 +170,9 @@ function TriggerEditor({
             />
           </label>
           <label className="block space-y-1 text-xs">
-            Time zone
+            时区
             <Input
-              aria-label="Time zone"
+              aria-label="时区"
               list={timezoneList}
               value={trigger.timezone || ""}
               onChange={(e) =>
@@ -161,18 +188,18 @@ function TriggerEditor({
             </datalist>
           </label>
           <div
-            className="border-t border-slate-200 pt-2 text-xs text-slate-500"
+            className="border-t border-border pt-2 text-xs text-text-3"
             aria-live="polite"
           >
             {preview.isFetching ? (
-              "Checking next runs…"
+              "正在计算接下来的运行时间…"
             ) : preview.error ? (
-              <span className="text-red-600">
+              <span className="text-danger-text">
                 {automationError(preview.error)}
               </span>
             ) : (
               <>
-                <p className="mb-1 font-medium">Next runs</p>
+                <p className="mb-1 font-medium">接下来 3 次运行</p>
                 {preview.data?.nextRuns.slice(0, 3).map((date) => (
                   <div key={date}>
                     {new Date(date).toLocaleString(undefined, {
@@ -188,9 +215,9 @@ function TriggerEditor({
       ) : (
         <>
           <label className="block space-y-1 text-xs">
-            Events to accept
+            接受的事件
             <Input
-              aria-label="Webhook event filters"
+              aria-label="Webhook 事件过滤"
               value={trigger.events?.join(", ") || ""}
               onChange={(e) =>
                 onChange({
@@ -204,9 +231,8 @@ function TriggerEditor({
               placeholder="build.completed, pull_request"
             />
           </label>
-          <p className="text-xs leading-5 text-slate-500">
-            Leave empty to accept all events. A protected webhook endpoint and
-            credential will be available after saving.
+          <p className="text-xs leading-5 text-text-3">
+            留空表示接受全部事件。保存后会生成受保护的 Webhook 端点与凭据。
           </p>
         </>
       )}
@@ -223,6 +249,7 @@ export function AutomationEditor({
   onSaved: (saved: AutomationSaved) => void;
 }) {
   const scope = useControlPlaneScope();
+  const [step, setStep] = useState(0);
   const [name, setName] = useState(rule?.name || "");
   const [description, setDescription] = useState(rule?.description || "");
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
@@ -259,7 +286,7 @@ export function AutomationEditor({
           const url = new URL(link);
           if (!["http:", "https:"].includes(url.protocol)) throw new Error();
         } catch {
-          throw new Error("Context links must start with https:// or http://.");
+          throw new Error("上下文链接必须以 https:// 或 http:// 开头。");
         }
       }
       const retained = (execution.contextRefs || []).filter(
@@ -288,6 +315,14 @@ export function AutomationEditor({
     e.preventDefault();
     if (!save.isPending) save.mutate();
   };
+  const stepOneValid = !!name.trim() && !!execution.runbook.trim();
+  const stepTwoValid = !!execution.assigneeRef;
+  const canAdvance =
+    step === 0 ? stepOneValid : step === 1 ? stepTwoValid : true;
+  const assigneeSummary =
+    execution.assigneeType === "agent"
+      ? `智能体 ${execution.assigneeRef || "（未选择）"}`
+      : `团队 ${execution.assigneeRef || "（未选择）"}`;
   return (
     <Dialog
       open
@@ -297,352 +332,418 @@ export function AutomationEditor({
     >
       <DialogContent size="xl">
         <DialogHeader>
-          <DialogTitle>
-            {rule ? "Edit automation" : "New automation"}
-          </DialogTitle>
+          <DialogTitle>{rule ? "编辑自动化" : "新建自动化"}</DialogTitle>
           <DialogDescription>
-            Give an Agent or Team a repeatable task.
+            四步完成配置：把重复性工作交给智能体或团队。
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="p-0 lg:overflow-hidden">
           <form
             id="automation-editor"
             onSubmit={submit}
-            className="grid lg:h-[calc(88vh-165px)] lg:grid-cols-[minmax(0,1.35fr)_minmax(310px,1fr)]"
+            className="grid lg:h-[calc(88vh-165px)] lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,1fr)]"
           >
-            <div className="space-y-5 p-6 lg:overflow-y-auto lg:border-r lg:border-slate-200">
-              <label className="block space-y-2 text-sm font-medium">
-                Name
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Daily engineering digest"
-                  required
-                  autoFocus
-                  maxLength={200}
-                  className="text-lg font-semibold"
-                />
-              </label>
-              <label className="block space-y-2 text-sm font-medium">
-                Runbook
-                <span className="block text-xs font-normal text-slate-500">
-                  Read by the Agent on every run. Include the goal, constraints,
-                  steps and expected output.
-                </span>
-                <Textarea
-                  value={execution.runbook}
-                  onChange={(e) =>
-                    setExecution({ ...execution, runbook: e.target.value })
-                  }
-                  required
-                  className="min-h-[330px] text-sm leading-7 lg:min-h-[450px]"
-                  placeholder={
-                    "1. Review the latest project activity.\n2. Summarize changes, blockers and decisions.\n3. Include source links and clear next steps."
-                  }
-                />
-              </label>
-              <label className="block space-y-2 text-sm font-medium">
-                Description{" "}
-                <span className="font-normal text-slate-400">(optional)</span>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="A short description for the automation list"
-                />
-              </label>
-              <label className="block space-y-2 text-sm font-medium">
-                Context links{" "}
-                <span className="font-normal text-slate-400">(optional)</span>
-                <Textarea
-                  value={contextLinks}
-                  onChange={(e) => setContextLinks(e.target.value)}
-                  placeholder="One project or document link per line"
-                />
-              </label>
-            </div>
-            <div className="space-y-6 p-6 lg:overflow-y-auto">
-              <fieldset className="space-y-2">
-                <legend className="mb-2 text-sm font-medium">Assignee</legend>
-                <select
-                  aria-label="Assignee type"
-                  className={selectClass}
-                  value={execution.assigneeType}
-                  onChange={(e) =>
-                    setExecution({
-                      ...execution,
-                      assigneeType: e.target.value as "agent" | "team",
-                      assigneeRef: "",
-                    })
-                  }
-                >
-                  <option value="agent">Agent</option>
-                  <option value="team">Team</option>
-                </select>
-                {execution.assigneeType === "agent" ? (
-                  <AgentPicker
-                    required
-                    value={execution.assigneeRef}
-                    onChange={(assigneeRef) =>
-                      setExecution({ ...execution, assigneeRef })
-                    }
-                  />
-                ) : (
-                  <select
-                    required
-                    aria-label="Team"
-                    className={selectClass}
-                    value={execution.assigneeRef}
-                    onChange={(e) =>
-                      setExecution({
-                        ...execution,
-                        assigneeRef: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Select Team…</option>
-                    {teams.data?.items
-                      .filter(
-                        (team) =>
-                          team.status === "active" ||
-                          team.id === execution.assigneeRef,
-                      )
-                      .map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                  </select>
-                )}
-                <p className="text-xs leading-5 text-slate-500">
-                  Runs use the assignee’s configured workspace, tools and
-                  execution environment.
-                </p>
-              </fieldset>
-              <fieldset className="space-y-2">
-                <legend className="mb-2 text-sm font-medium">
-                  Output mode
-                </legend>
-                {(
-                  [
-                    {
-                      value: "create_issue",
-                      title: "Create issue",
-                      detail: "Track, discuss and review each result.",
-                    },
-                    {
-                      value: "run_only",
-                      title: "Run only",
-                      detail: "View results in automation history.",
-                    },
-                  ] as const
-                ).map((mode) => (
-                  <label
-                    key={mode.value}
-                    className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${execution.outputMode === mode.value ? "border-slate-900 bg-slate-50" : "border-slate-200"}`}
-                  >
-                    <input
-                      type="radio"
-                      name="outputMode"
-                      checked={execution.outputMode === mode.value}
-                      onChange={() =>
-                        setExecution({ ...execution, outputMode: mode.value })
+            <div className="space-y-5 p-6 lg:overflow-y-auto lg:border-r lg:border-border">
+              {step === 0 && (
+                <>
+                  <label className="block space-y-2 text-sm font-medium">
+                    名称
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="每日工程动态摘要"
+                      required
+                      autoFocus
+                      maxLength={200}
+                      className="text-lg font-semibold"
+                    />
+                  </label>
+                  <label className="block space-y-2 text-sm font-medium">
+                    运行手册
+                    <span className="block text-xs font-normal text-text-3">
+                      智能体每次运行时都会阅读。请写明目标、约束、步骤与期望产出。
+                    </span>
+                    <Textarea
+                      value={execution.runbook}
+                      onChange={(e) =>
+                        setExecution({ ...execution, runbook: e.target.value })
+                      }
+                      required
+                      className="min-h-[300px] text-sm leading-7 lg:min-h-[400px]"
+                      placeholder={
+                        "1. 回顾最近的项目动态。\n2. 汇总变更、阻塞与决策。\n3. 附上来源链接和明确的下一步。"
                       }
                     />
-                    <span>
-                      <span className="block text-sm font-medium">
-                        {mode.title}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {mode.detail}
-                      </span>
-                    </span>
                   </label>
-                ))}
-              </fieldset>
-              {execution.outputMode === "create_issue" && (
-                <label className="block space-y-2 text-sm font-medium">
-                  Completion
-                  <select
-                    aria-label="Completion policy"
-                    className={selectClass}
-                    value={execution.completionPolicy}
-                    onChange={(e) =>
-                      setExecution({
-                        ...execution,
-                        completionPolicy: e.target.value as
-                          | "automatic"
-                          | "review",
-                      })
-                    }
-                  >
-                    <option value="review">Require human review</option>
-                    <option value="automatic">
-                      Complete when the work finishes
-                    </option>
-                  </select>
-                </label>
+                  <label className="block space-y-2 text-sm font-medium">
+                    描述{" "}
+                    <span className="font-normal text-text-3">（可选）</span>
+                    <Input
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="用于自动化列表的简短描述"
+                    />
+                  </label>
+                  <label className="block space-y-2 text-sm font-medium">
+                    上下文链接{" "}
+                    <span className="font-normal text-text-3">（可选）</span>
+                    <Textarea
+                      value={contextLinks}
+                      onChange={(e) => setContextLinks(e.target.value)}
+                      placeholder="每行一个项目或文档链接"
+                    />
+                  </label>
+                </>
               )}
-              {execution.outputMode === "create_issue" && subscriberRef && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={
-                      execution.subscribers?.includes(subscriberRef) ?? false
-                    }
-                    onChange={(event) =>
-                      setExecution({
-                        ...execution,
-                        subscribers: event.target.checked
-                          ? [...(execution.subscribers || []), subscriberRef]
-                          : (execution.subscribers || []).filter(
-                              (ref) => ref !== subscriberRef,
-                            ),
-                      })
-                    }
-                  />{" "}
-                  Subscribe me to each issue
-                </label>
+              {step === 1 && (
+                <>
+                  <fieldset className="space-y-2">
+                    <legend className="mb-2 text-sm font-medium">执行者</legend>
+                    <select
+                      aria-label="执行者类型"
+                      className={selectClass}
+                      value={execution.assigneeType}
+                      onChange={(e) =>
+                        setExecution({
+                          ...execution,
+                          assigneeType: e.target.value as "agent" | "team",
+                          assigneeRef: "",
+                        })
+                      }
+                    >
+                      <option value="agent">智能体</option>
+                      <option value="team">团队</option>
+                    </select>
+                    {execution.assigneeType === "agent" ? (
+                      <AgentPicker
+                        required
+                        value={execution.assigneeRef}
+                        onChange={(assigneeRef) =>
+                          setExecution({ ...execution, assigneeRef })
+                        }
+                      />
+                    ) : (
+                      <select
+                        required
+                        aria-label="团队"
+                        className={selectClass}
+                        value={execution.assigneeRef}
+                        onChange={(e) =>
+                          setExecution({
+                            ...execution,
+                            assigneeRef: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">选择团队…</option>
+                        {teams.data?.items
+                          .filter(
+                            (team) =>
+                              team.status === "active" ||
+                              team.id === execution.assigneeRef,
+                          )
+                          .map((team) => (
+                            <option key={team.id} value={team.id}>
+                              {team.name}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    <p className="text-xs leading-5 text-text-3">
+                      运行将使用执行者配置的工作空间、工具与执行环境。
+                    </p>
+                  </fieldset>
+                  <fieldset className="space-y-2">
+                    <legend className="mb-2 text-sm font-medium">产出方式</legend>
+                    {(
+                      [
+                        {
+                          value: "create_issue",
+                          title: "创建事项",
+                          detail: "每次结果可跟踪、讨论与评审。",
+                        },
+                        {
+                          value: "run_only",
+                          title: "仅运行",
+                          detail: "在自动化历史中查看结果。",
+                        },
+                      ] as const
+                    ).map((mode) => (
+                      <label
+                        key={mode.value}
+                        className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${execution.outputMode === mode.value ? "border-primary bg-primary-soft" : "border-border"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="outputMode"
+                          checked={execution.outputMode === mode.value}
+                          onChange={() =>
+                            setExecution({ ...execution, outputMode: mode.value })
+                          }
+                        />
+                        <span>
+                          <span className="block text-sm font-medium">
+                            {mode.title}
+                          </span>
+                          <span className="text-xs text-text-3">
+                            {mode.detail}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                  {execution.outputMode === "create_issue" && (
+                    <label className="block space-y-2 text-sm font-medium">
+                      完成策略
+                      <select
+                        aria-label="完成策略"
+                        className={selectClass}
+                        value={execution.completionPolicy}
+                        onChange={(e) =>
+                          setExecution({
+                            ...execution,
+                            completionPolicy: e.target.value as
+                              | "automatic"
+                              | "review",
+                          })
+                        }
+                      >
+                        <option value="review">需要人工评审</option>
+                        <option value="automatic">工作完成即结束</option>
+                      </select>
+                    </label>
+                  )}
+                  {execution.outputMode === "create_issue" && subscriberRef && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={
+                          execution.subscribers?.includes(subscriberRef) ?? false
+                        }
+                        onChange={(event) =>
+                          setExecution({
+                            ...execution,
+                            subscribers: event.target.checked
+                              ? [...(execution.subscribers || []), subscriberRef]
+                              : (execution.subscribers || []).filter(
+                                  (ref) => ref !== subscriberRef,
+                                ),
+                          })
+                        }
+                      />{" "}
+                      订阅每次生成的事项
+                    </label>
+                  )}
+                </>
               )}
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">Triggers</h3>
-                {triggers.length === 0 && (
-                  <p className="text-sm text-slate-500">
-                    Manual runs only. Add a trigger to run automatically.
-                  </p>
-                )}
-                {triggers.map((trigger) => (
-                  <TriggerEditor
-                    key={trigger.id}
-                    trigger={trigger}
-                    onChange={(next) =>
-                      setTriggers((items) =>
-                        items.map((t) => (t.id === next.id ? next : t)),
-                      )
-                    }
-                    onRemove={() =>
-                      setTriggers((items) =>
-                        items.filter((t) => t.id !== trigger.id),
-                      )
-                    }
-                  />
-                ))}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={triggers.length >= 10}
-                    onClick={() =>
-                      setTriggers((items) => [...items, defaultTrigger()])
-                    }
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Schedule
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={triggers.length >= 10}
-                    onClick={() =>
-                      setTriggers((items) => [
-                        ...items,
-                        defaultTrigger("webhook"),
-                      ])
-                    }
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Webhook
-                  </Button>
+              {step === 2 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">触发器</h3>
+                  {triggers.length === 0 && (
+                    <p className="text-sm text-text-3">
+                      当前仅支持手动运行。添加触发器后可自动执行。
+                    </p>
+                  )}
+                  {triggers.map((trigger) => (
+                    <TriggerEditor
+                      key={trigger.id}
+                      trigger={trigger}
+                      onChange={(next) =>
+                        setTriggers((items) =>
+                          items.map((t) => (t.id === next.id ? next : t)),
+                        )
+                      }
+                      onRemove={() =>
+                        setTriggers((items) =>
+                          items.filter((t) => t.id !== trigger.id),
+                        )
+                      }
+                    />
+                  ))}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={triggers.length >= 10}
+                      onClick={() =>
+                        setTriggers((items) => [...items, defaultTrigger()])
+                      }
+                    >
+                      <Plus className="h-3.5 w-3.5" /> 定时计划
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={triggers.length >= 10}
+                      onClick={() =>
+                        setTriggers((items) => [
+                          ...items,
+                          defaultTrigger("webhook"),
+                        ])
+                      }
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Webhook
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <details className="space-y-3 text-sm">
-                <summary className="cursor-pointer font-medium">
-                  Advanced settings
-                </summary>
-                <label className="block space-y-1">
-                  Overlapping runs
-                  <select
-                    className={selectClass}
-                    value={execution.concurrencyPolicy}
-                    onChange={(e) =>
-                      setExecution({
-                        ...execution,
-                        concurrencyPolicy: e.target.value as "skip" | "queue",
-                      })
+              )}
+              {step === 3 && (
+                <div className="space-y-5">
+                  <fieldset className="space-y-3 text-sm">
+                    <legend className="mb-2 text-sm font-medium">高级设置</legend>
+                    <label className="block space-y-1">
+                      并发策略
+                      <select
+                        className={selectClass}
+                        value={execution.concurrencyPolicy}
+                        onChange={(e) =>
+                          setExecution({
+                            ...execution,
+                            concurrencyPolicy: e.target.value as "skip" | "queue",
+                          })
+                        }
+                      >
+                        <option value="skip">上一轮仍在执行时跳过</option>
+                        <option value="queue">排队并按顺序执行</option>
+                      </select>
+                    </label>
+                    <label className="block space-y-1">
+                      最长排队时间（分钟）
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10080}
+                        value={execution.queueTimeoutSeconds / 60}
+                        onChange={(e) =>
+                          setExecution({
+                            ...execution,
+                            queueTimeoutSeconds: Number(e.target.value) * 60,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      最长执行时间（分钟）
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10080}
+                        value={execution.runTimeoutSeconds / 60}
+                        onChange={(e) =>
+                          setExecution({
+                            ...execution,
+                            runTimeoutSeconds: Number(e.target.value) * 60,
+                          })
+                        }
+                      />
+                    </label>
+                  </fieldset>
+                  <div className="space-y-2 rounded-xl border border-border bg-surface-2 p-4 text-sm">
+                    <h3 className="text-sm font-medium">配置确认</h3>
+                    <dl className="space-y-1 text-text-2">
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-text-3">名称</dt>
+                        <dd>{name || "—"}</dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-text-3">执行者</dt>
+                        <dd>{assigneeSummary}</dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-text-3">产出方式</dt>
+                        <dd>
+                          {execution.outputMode === "create_issue"
+                            ? "创建事项"
+                            : "仅运行"}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-text-3">触发器</dt>
+                        <dd>
+                          {triggers.length
+                            ? triggers
+                                .map((t) =>
+                                  t.type === "cron"
+                                    ? `定时 ${t.schedule}`
+                                    : "Webhook",
+                                )
+                                .join("；")
+                            : "仅手动"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={(e) => setEnabled(e.target.checked)}
+                    />{" "}
+                    保存后立即启用
+                  </label>
+                </div>
+              )}
+            </div>
+            <div className="space-y-4 p-6 lg:overflow-y-auto">
+              <StepIndicator step={step} />
+              <p className="text-xs leading-5 text-text-3">
+                第 {step + 1} / {WIZARD_STEPS.length} 步 ·{" "}
+                {WIZARD_STEPS[step].hint}
+              </p>
+              <div className="flex flex-col gap-2">
+                {step > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStep((v) => v - 1)}
+                  >
+                    上一步
+                  </Button>
+                )}
+                {step < WIZARD_STEPS.length - 1 ? (
+                  <Button
+                    type="button"
+                    disabled={!canAdvance}
+                    onClick={() => setStep((v) => v + 1)}
+                  >
+                    下一步
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    form="automation-editor"
+                    disabled={
+                      save.isPending ||
+                      !stepOneValid ||
+                      !stepTwoValid
                     }
                   >
-                    <option value="skip">
-                      Skip while a previous execution is active
-                    </option>
-                    <option value="queue">Queue and execute in order</option>
-                  </select>
-                </label>
-                <label className="block space-y-1">
-                  Maximum queue time (minutes)
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10080}
-                    value={execution.queueTimeoutSeconds / 60}
-                    onChange={(e) =>
-                      setExecution({
-                        ...execution,
-                        queueTimeoutSeconds: Number(e.target.value) * 60,
-                      })
-                    }
-                  />
-                </label>
-                <label className="block space-y-1">
-                  Maximum execution time (minutes)
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10080}
-                    value={execution.runTimeoutSeconds / 60}
-                    onChange={(e) =>
-                      setExecution({
-                        ...execution,
-                        runTimeoutSeconds: Number(e.target.value) * 60,
-                      })
-                    }
-                  />
-                </label>
-              </details>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(e) => setEnabled(e.target.checked)}
-                />{" "}
-                Enable after saving
-              </label>
+                    {save.isPending
+                      ? "保存中…"
+                      : rule
+                        ? "保存修改"
+                        : "创建自动化"}
+                  </Button>
+                )}
+                {step === 0 && !stepOneValid && (
+                  <p className="text-xs text-text-3">请先填写名称与运行手册。</p>
+                )}
+                {step === 1 && !stepTwoValid && (
+                  <p className="text-xs text-text-3">请先选择执行者。</p>
+                )}
+              </div>
             </div>
           </form>
         </DialogBody>
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
-          <span role="alert" className="max-w-lg text-sm text-red-600">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4">
+          <span role="alert" className="max-w-lg text-sm text-danger-text">
             {save.error ? automationError(save.error) : ""}
           </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="automation-editor"
-              disabled={
-                save.isPending ||
-                !name.trim() ||
-                !execution.runbook.trim() ||
-                !execution.assigneeRef
-              }
-            >
-              {save.isPending
-                ? "Saving…"
-                : rule
-                  ? "Save changes"
-                  : "Create automation"}
-            </Button>
-          </div>
+          <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
+            取消
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

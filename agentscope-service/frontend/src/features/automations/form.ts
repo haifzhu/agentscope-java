@@ -71,10 +71,10 @@ export function buildAutomationWrite(
   triggers: AutomationTrigger[],
   version?: number,
 ): AutomationWrite {
-  if (!name.trim()) throw new Error("Enter an automation name.");
+  if (!name.trim()) throw new Error("请填写自动化名称。");
   if (!execution.runbook.trim())
-    throw new Error("Describe the work in the runbook.");
-  if (!execution.assigneeRef) throw new Error("Select an Agent or Team.");
+    throw new Error("请在运行手册中描述要执行的工作。");
+  if (!execution.assigneeRef) throw new Error("请选择执行者（智能体或团队）。");
   return {
     tenant,
     namespace,
@@ -99,7 +99,7 @@ export function automationError(error: unknown): string {
   const message =
     error instanceof Error
       ? error.message
-      : "The request could not be completed.";
+      : "请求未能完成，请稍后重试。";
   try {
     const body = JSON.parse(message) as { error?: string };
     return body.error || message;
@@ -110,18 +110,18 @@ export function automationError(error: unknown): string {
 export const terminalRun = (status: string) =>
   ["completed", "failed", "skipped", "cancelled", "duplicate"].includes(status);
 export function runLabel(status: string, waitReason?: string) {
-  if (status === "waiting" && waitReason === "review") return "Awaiting review";
+  if (status === "waiting" && waitReason === "review") return "待评审";
   return (
     (
       {
-        queued: "Queued",
-        dispatching: "Dispatching",
-        running: "Running",
-        waiting: "Waiting",
-        completed: "Completed",
-        failed: "Failed",
-        skipped: "Skipped",
-        cancelled: "Cancelled",
+        queued: "排队中",
+        dispatching: "派发中",
+        running: "运行中",
+        waiting: "等待中",
+        completed: "已完成",
+        failed: "失败",
+        skipped: "已跳过",
+        cancelled: "已取消",
       } as Record<string, string>
     )[status] || status
   );

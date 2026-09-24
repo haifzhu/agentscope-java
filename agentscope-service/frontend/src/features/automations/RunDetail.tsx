@@ -51,7 +51,7 @@ export function RunBadge({ run }: { run: AutomationRun }) {
       }
     >
       {run.version === 0 && run.status === "completed"
-        ? "Dispatched (legacy)"
+        ? "已派发（历史版本）"
         : runLabel(run.status, run.waitReason)}
     </Badge>
   );
@@ -81,7 +81,7 @@ export function RunDetail({
   if (!detail.data)
     return (
       <WorkEmpty
-        title="Run could not be loaded"
+        title="运行记录加载失败"
         description={automationError(detail.error)}
       />
     );
@@ -91,7 +91,7 @@ export function RunDetail({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <RunBadge run={run} />
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-text-3">
             {run.source || run.triggerType} · {automationDate(run.createdAt)}
           </span>
         </div>
@@ -110,7 +110,7 @@ export function RunDetail({
               })
             }
           >
-            Run again
+            重新运行
           </Button>
         ) : (
           <Button
@@ -122,18 +122,18 @@ export function RunDetail({
               )
             }
           >
-            Cancel run
+            取消运行
           </Button>
         )}
       </div>
-      <dl className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
+      <dl className="grid gap-3 rounded-xl bg-surface-2 p-4 text-sm sm:grid-cols-3">
         {[
-          ["Scheduled", run.scheduledAt],
-          ["Started", run.startedAt],
-          ["Finished", run.completedAt],
+          ["计划时间", run.scheduledAt],
+          ["开始时间", run.startedAt],
+          ["结束时间", run.completedAt],
         ].map(([label, value]) => (
           <div key={label}>
-            <dt className="text-slate-500">{label}</dt>
+            <dt className="text-text-3">{label}</dt>
             <dd>{automationDate(value)}</dd>
           </div>
         ))}
@@ -141,55 +141,55 @@ export function RunDetail({
       {run.errorMessage && (
         <div
           role="alert"
-          className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-xl border border-danger-soft bg-danger-soft p-4 text-sm text-danger-text"
         >
           {run.errorMessage}
           <span className="mt-1 block text-xs">{run.errorCode}</span>
         </div>
       )}
       {run.waitReason && (
-        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="rounded-xl bg-warning-soft p-3 text-sm text-warning-text">
           {run.waitReason === "review"
-            ? "Execution finished. Open the issue to review and accept the result."
-            : `Waiting: ${run.waitReason}`}
+            ? "执行已完成。请打开对应事项，评审并验收结果。"
+            : `等待中：${run.waitReason}`}
         </p>
       )}
       {issue && (
         <Link
-          className="text-sm text-blue-700 underline"
+          className="text-sm text-primary underline"
           to={`/work/issues/${issue.id}?${scopeQuery}`}
         >
           {issue.visibility === "operational"
-            ? "Open execution record"
-            : `Open issue: ${issue.title}`}
+            ? "打开执行记录"
+            : `打开事项：${issue.title}`}
         </Link>
       )}
       {run.orchestrationRunId && (
         <Link
-          className="block text-sm text-blue-700 underline"
+          className="block text-sm text-primary underline"
           to={scope.scopedPath(`/work/executions/${run.orchestrationRunId}`)}
         >
-          Open execution graph and sessions
+          打开执行图与会话
         </Link>
       )}
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Result</h3>
+        <h3 className="mb-2 text-sm font-semibold">结果</h3>
         {run.output != null ? (
-          <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 p-4 text-sm leading-6">
+          <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-border p-4 text-sm leading-6">
             {displayValue(run.output)}
           </pre>
         ) : (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-text-3">
             {terminalRun(run.status)
-              ? "No result was produced."
-              : "The result will appear here when work is available."}
+              ? "本次运行未产出结果。"
+              : "结果产生后将在此展示。"}
           </p>
         )}
       </section>
       {!!tasks?.length && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold">Tasks</h3>
-          <div className="divide-y rounded-xl border border-slate-200">
+          <h3 className="mb-2 text-sm font-semibold">任务</h3>
+          <div className="divide-y rounded-xl border border-border">
             {tasks.map((task) => (
               <div
                 className="flex flex-wrap justify-between gap-2 p-3 text-sm"
@@ -197,13 +197,13 @@ export function RunDetail({
               >
                 <Link
                   to={`/work/executions/tasks/${task.id}?${scopeQuery}`}
-                  className="text-blue-700"
+                  className="text-primary"
                 >
                   <AgentIdentity agentId={task.agentId} showId={false} />
                 </Link>
                 <span>{task.status}</span>
                 {task.errorMessage && (
-                  <p className="w-full text-red-700">{task.errorMessage}</p>
+                  <p className="w-full text-danger-text">{task.errorMessage}</p>
                 )}
               </div>
             ))}
@@ -212,7 +212,7 @@ export function RunDetail({
       )}
       {!!artifacts?.length && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold">Artifacts</h3>
+          <h3 className="mb-2 text-sm font-semibold">产物</h3>
           {artifacts.map((artifact) => (
             <div className="text-sm" key={artifact.id}>
               {artifact.filename}
@@ -220,30 +220,30 @@ export function RunDetail({
           ))}
           {issue && (
             <Link
-              className="text-sm text-blue-700 underline"
+              className="text-sm text-primary underline"
               to={`/work/issues/${issue.id}?${scopeQuery}`}
             >
-              Open artifacts in the execution record
+              在执行记录中查看产物
             </Link>
           )}
         </section>
       )}
       <details>
         <summary className="cursor-pointer text-sm font-medium">
-          Input and configuration used for this run
+          本次运行的输入与配置
         </summary>
         <div className="mt-3 space-y-3">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-text-3">
             {run.snapshot
-              ? `Configuration version ${run.snapshot.version}`
-              : "This older run has no configuration snapshot."}
+              ? `配置版本 ${run.snapshot.version}`
+              : "较早的运行没有配置快照。"}
           </p>
           {run.snapshot?.execution?.runbook && (
-            <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm">
+            <pre className="whitespace-pre-wrap rounded-lg bg-surface-2 p-4 text-sm">
               {run.snapshot.execution.runbook}
             </pre>
           )}
-          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-4 text-xs">
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-surface-2 p-4 text-xs">
             {displayValue(run.input ?? {})}
           </pre>
         </div>

@@ -191,21 +191,21 @@ export default function AutomationsPage() {
           onClick={() => navigate(runId ? id : undefined)}
         >
           <ArrowLeft className="h-4 w-4" />
-          {runId ? "Run history" : "Automations"}
+          {runId ? "运行历史" : "自动化"}
         </Button>
       )}
       <WorkPageHeader
-        title={id ? rule?.name || "Automation" : "Automations"}
+        title={id ? rule?.name || "自动化" : "自动化"}
         description={
           id
             ? rule?.description ||
-              "Repeatable work with a complete execution history."
-            : "Put recurring work in the hands of your Agents and Teams."
+              "附带完整执行历史的可重复工作。"
+            : "把重复性工作交给你的智能体与团队。"
         }
         actions={
           !id ? (
             <Button onClick={() => setEditor("new")}>
-              <Plus className="h-4 w-4" /> New automation
+              <Plus className="h-4 w-4" /> 新建自动化
             </Button>
           ) : rule && !rule.archivedAt ? (
             <>
@@ -214,11 +214,11 @@ export default function AutomationsPage() {
                 onClick={() => setEditor(rule)}
                 disabled={rule.actionType !== "create_issue"}
               >
-                <Pencil className="h-4 w-4" /> Edit
+                <Pencil className="h-4 w-4" /> 编辑
               </Button>
               <Button disabled={action.isPending} onClick={() => runNow(rule)}>
                 <Play className="h-4 w-4" />
-                {rule.enabled ? "Run now" : "Test run"}
+                {rule.enabled ? "立即运行" : "试运行"}
               </Button>
             </>
           ) : undefined
@@ -227,84 +227,84 @@ export default function AutomationsPage() {
       {action.error && (
         <p
           role="alert"
-          className="rounded-xl bg-red-50 p-4 text-sm text-red-700"
+          className="rounded-xl bg-danger-soft p-4 text-sm text-danger-text"
         >
           {automationError(action.error)}
         </p>
       )}
       {!id ? (
         <WorkPanel>
-          <div className="flex flex-wrap gap-3 border-b border-slate-200 p-4">
+          <div className="flex flex-wrap gap-3 border-b border-border p-4">
             <Input
-              aria-label="Search automations"
-              placeholder="Search automations…"
+              aria-label="搜索自动化"
+              placeholder="搜索自动化…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-sm"
             />
             <select
-              aria-label="Filter automations"
-              className="rounded-lg border border-slate-200 px-3 text-sm"
+              aria-label="按状态筛选"
+              className="rounded-lg border border-border px-3 text-sm"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
-              <option value="all">All statuses</option>
-              <option value="enabled">Enabled</option>
-              <option value="paused">Paused</option>
+              <option value="all">全部状态</option>
+              <option value="enabled">已启用</option>
+              <option value="paused">已暂停</option>
             </select>
           </div>
           {list.isLoading ? (
             <WorkLoadingRows rows={4} />
           ) : list.error ? (
             <WorkEmpty
-              title="Could not load automations"
+              title="自动化列表加载失败"
               description={automationError(list.error)}
             />
           ) : rows.length === 0 ? (
             <WorkEmpty
               title={
                 list.data?.items.length
-                  ? "No matching automations"
-                  : "Your repeatable work starts here"
+                  ? "没有匹配的自动化"
+                  : "你的重复性工作从这里开始"
               }
-              description="Create a runbook, choose an assignee and set a schedule or webhook."
+              description="创建运行手册，选择执行者，并设置定时或 Webhook 触发。"
               action={
                 <Button onClick={() => setEditor("new")}>
-                  Create automation
+                  创建自动化
                 </Button>
               }
             />
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-border">
               {rows.map((item) => (
                 <article
                   key={item.id}
                   className="flex flex-wrap items-center gap-4 p-5"
                 >
-                  <Workflow className="h-5 w-5 text-slate-400" />
+                  <Workflow className="h-5 w-5 text-text-3" />
                   <button
                     className="min-w-0 flex-1 text-left"
                     onClick={() => navigate(item.id)}
                   >
-                    <span className="font-semibold text-slate-900">
+                    <span className="font-semibold text-text">
                       {item.name}
                     </span>
-                    <span className="mt-1 block text-sm text-slate-500">
+                    <span className="mt-1 block text-sm text-text-3">
                       {item.description ||
                         item.execution?.runbook.slice(0, 100)}
                     </span>
-                    <span className="mt-2 flex flex-wrap gap-4 text-xs text-slate-400">
-                      <span>{item.triggers?.length || 0} triggers</span>
-                      <span>Next: {date(item.nextRunAt)}</span>
+                    <span className="mt-2 flex flex-wrap gap-4 text-xs text-text-3">
+                      <span>{item.triggers?.length || 0} 个触发器</span>
+                      <span>下次运行：{date(item.nextRunAt)}</span>
                       <span>
                         {item.lastRunAt
-                          ? `Last ran ${formatRelative(item.lastRunAt)}`
-                          : "Never run"}
+                          ? `上次运行 ${formatRelative(item.lastRunAt)}`
+                          : "从未运行"}
                       </span>
                     </span>
                   </button>
                   <Badge tone={item.enabled ? "success" : "default"}>
-                    {item.enabled ? "Enabled" : "Paused"}
+                    {item.enabled ? "已启用" : "已暂停"}
                   </Badge>
                   <Button
                     variant="outline"
@@ -313,20 +313,20 @@ export default function AutomationsPage() {
                     onClick={() => runNow(item)}
                   >
                     <Play className="h-3.5 w-3.5" />
-                    {item.enabled ? "Run now" : "Test run"}
+                    {item.enabled ? "立即运行" : "试运行"}
                   </Button>
                 </article>
               ))}
             </div>
           )}
-          <div className="flex justify-between border-t border-slate-100 p-3">
+          <div className="flex justify-between border-t border-border p-3">
             <Button
               variant="ghost"
               size="sm"
               disabled={listOffset === 0}
               onClick={() => setListOffset((v) => Math.max(0, v - 100))}
             >
-              Previous
+              上一页
             </Button>
             <Button
               variant="ghost"
@@ -334,7 +334,7 @@ export default function AutomationsPage() {
               disabled={(list.data?.items.length || 0) < 100}
               onClick={() => setListOffset((v) => v + 100)}
             >
-              Next
+              下一页
             </Button>
           </div>
         </WorkPanel>
@@ -342,25 +342,25 @@ export default function AutomationsPage() {
         <WorkLoadingRows rows={4} />
       ) : !rule ? (
         <WorkEmpty
-          title="Automation unavailable"
+          title="自动化不存在或已被删除"
           description={automationError(detail.error)}
         />
       ) : (
         <>
           {!runId && (
             <WorkPanel>
-              <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-5">
+              <div className="flex flex-wrap items-center gap-3 border-b border-border p-5">
                 <Badge tone={rule.enabled ? "success" : "default"}>
                   {rule.archivedAt
-                    ? "Archived"
+                    ? "已归档"
                     : rule.enabled
-                      ? "Enabled"
-                      : "Paused"}
+                      ? "已启用"
+                      : "已暂停"}
                 </Badge>
-                <span className="flex-1 text-sm text-slate-500">
+                <span className="flex-1 text-sm text-text-3">
                   {rule.execution?.outputMode === "run_only"
-                    ? "Run only"
-                    : "Creates issues"}{" "}
+                    ? "仅运行"
+                    : "创建事项"}{" "}
                   ·{" "}
                   {rule.execution?.assigneeType === "agent" ? (
                     <AgentIdentity
@@ -368,9 +368,9 @@ export default function AutomationsPage() {
                       showId={false}
                     />
                   ) : rule.execution?.assigneeType === "team" ? (
-                    "Team execution"
+                    "团队执行"
                   ) : (
-                    "Advanced action"
+                    "高级动作配置"
                   )}
                 </span>
                 {!rule.archivedAt && (
@@ -389,43 +389,43 @@ export default function AutomationsPage() {
                       }
                     >
                       <Power className="h-4 w-4" />
-                      {rule.enabled ? "Pause" : "Resume"}
+                      {rule.enabled ? "暂停" : "恢复"}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setArchiveTarget(rule)}
                     >
-                      <Archive className="h-4 w-4" /> Archive
+                      <Archive className="h-4 w-4" /> 归档
                     </Button>
                   </>
                 )}
               </div>
               <div className="grid gap-6 p-5 lg:grid-cols-2">
                 <div>
-                  <h2 className="mb-2 text-sm font-semibold">Runbook</h2>
-                  <p className="max-h-64 overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                  <h2 className="mb-2 text-sm font-semibold">运行手册</h2>
+                  <p className="max-h-64 overflow-auto whitespace-pre-wrap text-sm leading-6 text-text-2">
                     {rule.execution?.runbook ||
-                      "This rule uses the advanced action configuration. Edit it through the API."}
+                      "该规则使用高级动作配置，请通过 API 编辑。"}
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <h2 className="text-sm font-semibold">Triggers</h2>
+                  <h2 className="text-sm font-semibold">触发器</h2>
                   {rule.triggers?.map((t) => (
-                    <div key={t.id} className="rounded-xl bg-slate-50 p-3">
+                    <div key={t.id} className="rounded-xl bg-surface-2 p-3">
                       <div className="flex justify-between text-sm">
                         <span>
                           {t.type === "cron"
-                            ? `${t.schedule} · ${t.timezone}`
+                            ? `定时 ${t.schedule} · ${t.timezone}`
                             : "Webhook"}
                         </span>
-                        <span className="text-xs text-slate-500">
-                          {t.enabled ? "Enabled" : "Disabled"}
+                        <span className="text-xs text-text-3">
+                          {t.enabled ? "已启用" : "已停用"}
                         </span>
                       </div>
                       {t.type === "cron" ? (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Next: {date(t.nextRunAt)}
+                        <p className="mt-1 text-xs text-text-3">
+                          下次运行：{date(t.nextRunAt)}
                         </p>
                       ) : (
                         <>
@@ -433,9 +433,9 @@ export default function AutomationsPage() {
                             {window.location.origin}/hooks/v1/automations/{id}/
                             {t.id}
                           </code>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Events: {t.events?.join(", ") || "All events"}. Send
-                            X-Automation-Secret and Idempotency-Key headers.
+                          <p className="mt-1 text-xs text-text-3">
+                            事件：{t.events?.join("、") || "全部事件"}。请附带
+                            X-Automation-Secret 与 Idempotency-Key 请求头。
                           </p>
                         </>
                       )}
@@ -457,13 +457,11 @@ export default function AutomationsPage() {
                           })
                         }
                       >
-                        Generate new webhook credential
+                        生成新的 Webhook 凭据
                       </Button>
                     )}
-                  <p className="text-xs text-slate-500">
-                    Runs inherit the assignee’s workspace and execution
-                    environment. Completed executions awaiting review do not
-                    block the next schedule.
+                  <p className="text-xs text-text-3">
+                    运行将继承执行者的工作空间与执行环境。等待评审的已完成执行不会阻塞下一次调度。
                   </p>
                 </div>
               </div>
@@ -471,7 +469,7 @@ export default function AutomationsPage() {
           )}
           {runId ? (
             <WorkPanel>
-              <WorkPanelHeader title="Run details" />
+              <WorkPanelHeader title="运行详情" />
               <RunDetail
                 automationId={id}
                 runId={runId}
@@ -481,20 +479,20 @@ export default function AutomationsPage() {
             </WorkPanel>
           ) : (
             <WorkPanel>
-              <div className="flex gap-2 border-b border-slate-200 p-3">
+              <div className="flex gap-2 border-b border-border p-3">
                 <Button
                   variant={tab === "runs" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setTab("runs")}
                 >
-                  Run history
+                  运行历史
                 </Button>
                 <Button
                   variant={tab === "deliveries" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setTab("deliveries")}
                 >
-                  Webhook deliveries
+                  Webhook 投递
                 </Button>
               </div>
               {tab === "runs" ? (
@@ -502,28 +500,28 @@ export default function AutomationsPage() {
                   <WorkLoadingRows rows={3} />
                 ) : runs.error ? (
                   <WorkEmpty
-                    title="Could not load runs"
+                    title="运行历史加载失败"
                     description={automationError(runs.error)}
                   />
                 ) : !runs.data?.items.length ? (
                   <WorkEmpty
-                    title="No runs yet"
-                    description="Run the automation now to check its first result."
+                    title="暂无运行记录"
+                    description="立即运行一次，检查首次结果。"
                   />
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-border">
                     {runs.data.items.map((run) => (
                       <button
                         key={run.id}
                         onClick={() => navigate(id, run.id)}
-                        className="flex w-full flex-wrap items-center gap-4 p-5 text-left hover:bg-slate-50"
+                        className="flex w-full flex-wrap items-center gap-4 p-5 text-left hover:bg-surface-2"
                       >
-                        <Clock3 className="h-4 w-4 text-slate-400" />
+                        <Clock3 className="h-4 w-4 text-text-3" />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">
                             {date(run.createdAt)}
                           </span>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-text-3">
                             {run.source || run.triggerType}
                             {run.errorMessage ? ` · ${run.errorMessage}` : ""}
                           </span>
@@ -537,22 +535,22 @@ export default function AutomationsPage() {
                 <WorkLoadingRows rows={3} />
               ) : deliveries.error ? (
                 <WorkEmpty
-                  title="Could not load deliveries"
+                  title="投递记录加载失败"
                   description={automationError(deliveries.error)}
                 />
               ) : !deliveries.data?.items.length ? (
                 <WorkEmpty
-                  title="No webhook deliveries"
-                  description="Incoming events and their outcomes will appear here."
+                  title="暂无 Webhook 投递"
+                  description="收到的事件及其处理结果将在此展示。"
                 />
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-border">
                   {deliveries.data.items.map((d) => (
                     <div key={d.id} className="space-y-2 p-5">
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="flex-1 text-sm font-medium">
                           {d.event}{" "}
-                          <span className="font-normal text-slate-400">
+                          <span className="font-normal text-text-3">
                             · {date(d.createdAt)}
                           </span>
                         </span>
@@ -563,7 +561,7 @@ export default function AutomationsPage() {
                             variant="ghost"
                             onClick={() => navigate(id, d.runId)}
                           >
-                            Open run
+                            打开运行
                           </Button>
                         )}
                         {d.status !== "queued" && d.status !== "rejected" && (
@@ -577,16 +575,16 @@ export default function AutomationsPage() {
                               )
                             }
                           >
-                            Replay
+                            重放
                           </Button>
                         )}
                       </div>
                       {d.reason && (
-                        <p className="text-xs text-slate-500">{d.reason}</p>
+                        <p className="text-xs text-text-3">{d.reason}</p>
                       )}
                       <details className="text-xs">
-                        <summary className="cursor-pointer">Payload</summary>
-                        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words bg-slate-50 p-3">
+                        <summary className="cursor-pointer">请求负载</summary>
+                        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words bg-surface-2 p-3">
                           {displayValue(d.input)}
                         </pre>
                       </details>
@@ -594,7 +592,7 @@ export default function AutomationsPage() {
                   ))}
                 </div>
               )}
-              <div className="flex justify-between border-t border-slate-100 p-3">
+              <div className="flex justify-between border-t border-border p-3">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -644,25 +642,23 @@ export default function AutomationsPage() {
       >
         <DialogContent size="md">
           <DialogHeader>
-            <DialogTitle>Webhook credential</DialogTitle>
+            <DialogTitle>Webhook 凭据</DialogTitle>
             <DialogDescription>
-              This credential is shown once. Save it in your webhook sender;
-              generating a new credential invalidates the previous one.
+              该凭据仅显示一次。请保存到你的 Webhook 发送方；生成新凭据后旧凭据立即失效。
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <Input
-              aria-label="Webhook credential"
+              aria-label="Webhook 凭据"
               type="password"
               readOnly
               value={secret}
             />
             <Button onClick={() => void navigator.clipboard.writeText(secret)}>
-              <Copy className="h-4 w-4" /> Copy credential
+              <Copy className="h-4 w-4" /> 复制凭据
             </Button>
-            <p className="text-sm text-slate-500">
-              Send it as the X-Automation-Secret header. Also send a stable
-              Idempotency-Key for each event.
+            <p className="text-sm text-text-3">
+              请以 X-Automation-Secret 请求头发送；每个事件附带稳定的 Idempotency-Key。
             </p>
           </DialogBody>
         </DialogContent>
@@ -675,9 +671,9 @@ export default function AutomationsPage() {
       >
         <DialogContent size="md">
           <DialogHeader>
-            <DialogTitle>Archive automation?</DialogTitle>
+            <DialogTitle>归档该自动化？</DialogTitle>
             <DialogDescription>
-              New triggers stop. Existing runs and their history are retained.
+              新的触发将停止。既有运行及其历史会保留。
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
@@ -695,7 +691,7 @@ export default function AutomationsPage() {
                   });
               }}
             >
-              Archive automation
+              确认归档
             </Button>
           </DialogBody>
         </DialogContent>
