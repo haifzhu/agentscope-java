@@ -1,4 +1,5 @@
 import ResolvedDefinitionFiles from '../components/ResolvedDefinitionFiles';
+
 /*
  * Copyright 2024-2026 the original author or authors.
  *
@@ -21,14 +22,7 @@ import SkillsWorkspacePanel from '../components/SkillsWorkspacePanel';
 import LinkedWorkspaceBanner from '../components/LinkedWorkspaceBanner';
 import type { AgentDefinition } from '../api/agents';
 
-const helpStyle: React.CSSProperties = {
-  padding: '8px 24px',
-  fontSize: '0.78rem',
-  color: '#64748b',
-  background: '#f8fafc',
-  borderBottom: '1px solid #e2e8f0',
-};
-
+/** C7：定义「技能」分区，令牌化 + 中文化。 */
 export default function AgentSkillsPage() {
   const { agentId, agent, canEdit = false, refreshAgent } = useOutletContext<{ agentId: string; agent: AgentDefinition | null; canEdit?: boolean; refreshAgent?: () => Promise<unknown> }>();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -37,16 +31,15 @@ export default function AgentSkillsPage() {
   if (agent?.workspaceBinding) return <ResolvedDefinitionFiles agent={agent} prefix="skills/" />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="flex h-full min-h-0 flex-col">
       {linked ? (
         <LinkedWorkspaceBanner workspaceId={linked} resource="skills" />
       ) : (
-        <div style={helpStyle}>
-          Manage skills under this agent&apos;s private workspace. For shared packs, create a Workspace
-          and link it under Definition → Workspace.
+        <div className="border-b border-border bg-surface-2 px-6 py-2 text-xs leading-5 text-text-3">
+          在该智能体的私有工作区下管理技能。如需共享技能包，请创建工作区并在「定义 → 工作区」关联。
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="min-h-0 flex-1">
         <SkillsWorkspacePanel
           agentId={agentId}
           refreshKey={refreshKey}

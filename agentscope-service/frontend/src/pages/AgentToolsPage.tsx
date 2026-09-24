@@ -24,14 +24,9 @@ import { getAgent, updateAgent } from '../api/agents';
 import type { AgentDefinition } from '../api/agents';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 
-const helpStyle: React.CSSProperties = {
-  padding: '8px 24px',
-  fontSize: '0.78rem',
-  color: '#64748b',
-  background: '#f8fafc',
-  borderBottom: '1px solid #e2e8f0',
-};
+const HELP_CLASS = 'border-b border-border bg-surface-2 px-6 py-2 text-xs leading-5 text-text-3';
 
+/** C7：定义「工具与 MCP」分区，令牌化 + 中文化。 */
 export default function AgentToolsPage() {
   const { agentId, agent, canEdit = false, refreshAgent } = useOutletContext<{ agentId: string; agent: AgentDefinition | null; canEdit?: boolean; refreshAgent?: () => Promise<unknown> }>();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -43,21 +38,19 @@ export default function AgentToolsPage() {
   const bumpRefresh = () => { setRefreshKey(k => k + 1); void refreshAgent?.(); };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="flex h-full min-h-0 flex-col">
       {linked ? (
         <LinkedWorkspaceBanner workspaceId={linked} resource="tools" hasOverrides={!!agent?.workspaceBinding?.overrides.includes('tools')} />
       ) : (
-        <div style={helpStyle}>
-          Choose the tools this Agent can use in new sessions, and select <b>Ask</b> when
-          a tool needs your approval before running.
+        <div className={HELP_CLASS}>
+          选择该智能体在新会话中可使用的工具；需要你批准才能运行的工具请选择<b>询问</b>。
         </div>
       )}
-      {agent?.runtimeKind === 'hosted-runtime' && <div role="note" style={helpStyle}>
-        Built-in tools in this catalog belong to Managed Agents. Hosted runtimes use their native tools;
-        supported mappings depend on the provider. Codex does not apply these built-in policies.
-        Use its Runtime Profile for sandbox and approval settings. MCP connections can be configured below.
+      {agent?.runtimeKind === 'hosted-runtime' && <div role="note" className={HELP_CLASS}>
+        目录中的内置工具属于平台托管智能体。托管运行时使用自身原生工具，支持情况取决于提供方；
+        Codex 不应用这些内置策略，沙箱与审批设置请在其运行时档案中配置。MCP 连接可在下方配置。
       </div>}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div className="min-h-0 flex-1 overflow-auto">
         {agent && <McpConnectionsEditor servers={agent.mcpServers ?? []} tools={agent.tools ?? []} readOnly={!mcpEditable} canConnect={canEdit} onOAuthConnected={async vaultId => {
           const latest = await getAgent(agentId);
           if (!(latest.defaultVaultIds ?? []).includes(vaultId)) {
@@ -80,8 +73,8 @@ export default function AgentToolsPage() {
       <Dialog open={browseOpen && toolsEditable} onOpenChange={setBrowseOpen}>
         <DialogContent className="h-[min(640px,86vh)] max-w-[820px]">
           <DialogHeader>
-            <DialogTitle>Configure tools</DialogTitle>
-            <DialogDescription>Choose built-in tools and add MCP connections for this Agent.</DialogDescription>
+            <DialogTitle>配置工具</DialogTitle>
+            <DialogDescription>为该智能体选择内置工具并添加 MCP 连接。</DialogDescription>
           </DialogHeader>
           <div className="relative min-h-0 flex-1 overflow-hidden">
             <ToolsCatalogPanel agentId={agentId} onSaved={bumpRefresh} allowMcp={mcpEditable} />

@@ -19,14 +19,15 @@ import { useOutletContext } from 'react-router-dom';
 import { AgentDefinition } from '../api/agents';
 import AgentSettingsForm from '../components/AgentSettingsForm';
 
-export default function AgentSettingsPage({ section = 'behavior' }: { section?: 'behavior' | 'workspace' | 'versions' }) {
+/** C7：定义「行为」分区挂载点（版本分区已由 AgentVersionsPanel 接管）。 */
+export default function AgentSettingsPage({ section = 'behavior' }: { section?: 'behavior' | 'workspace' }) {
   const { agent, refreshAgent } = useOutletContext<{
     agentId: string;
     agent: AgentDefinition | null;
     refreshAgent?: () => void | Promise<unknown>;
   }>();
   if (!agent) {
-    return <div style={{ padding: '24px 28px', color: '#64748b' }}>Loading…</div>;
+    return <div className="p-6 text-sm text-text-3">正在加载智能体…</div>;
   }
   return <AgentSettingsForm key={section} section={section} agent={agent} onSaved={refreshAgent} />;
 }

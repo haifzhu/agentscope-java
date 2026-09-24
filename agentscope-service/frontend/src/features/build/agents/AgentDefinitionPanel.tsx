@@ -48,6 +48,7 @@ import AgentSkillsPage from "@/pages/AgentSkillsPage";
 import AgentToolsPage from "@/pages/AgentToolsPage";
 import AgentSubagentsPage from "@/pages/AgentSubagentsPage";
 import AgentSettingsPage from "@/pages/AgentSettingsPage";
+import AgentVersionsPanel from "./AgentVersionsPanel";
 
 function AgentBehaviorSection() {
   return <AgentSettingsPage section="behavior" />;
@@ -70,5 +71,6 @@ function AgentSubagentsSection() {
 }
 
 function AgentVersionsSection() {
-  return <AgentSettingsPage section="versions" />;
+  // C7：版本分区升级为独立面板（版本历史 + 版本对比）。
+  return <AgentVersionsPanel />;
 }

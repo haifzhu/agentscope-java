@@ -1,4 +1,5 @@
 import ResolvedDefinitionFiles from '../components/ResolvedDefinitionFiles';
+
 /*
  * Copyright 2024-2026 the original author or authors.
  *
@@ -21,14 +22,7 @@ import SubagentPanel from '../components/SubagentPanel';
 import LinkedWorkspaceBanner from '../components/LinkedWorkspaceBanner';
 import type { AgentDefinition } from '../api/agents';
 
-const helpStyle: React.CSSProperties = {
-  padding: '8px 24px',
-  fontSize: '0.78rem',
-  color: '#64748b',
-  background: '#f8fafc',
-  borderBottom: '1px solid #e2e8f0',
-};
-
+/** C7：定义「子智能体」分区，令牌化 + 中文化。 */
 export default function AgentSubagentsPage() {
   const { agentId, agent, canEdit = false, refreshAgent } = useOutletContext<{ agentId: string; agent: AgentDefinition | null; canEdit?: boolean; refreshAgent?: () => Promise<unknown> }>();
   const linked = agent?.workspaceId;
@@ -36,16 +30,15 @@ export default function AgentSubagentsPage() {
   if (agent?.workspaceBinding) return <ResolvedDefinitionFiles agent={agent} prefix="subagents/" />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="flex h-full min-h-0 flex-col">
       {linked ? (
         <LinkedWorkspaceBanner workspaceId={linked} resource="subagents" />
       ) : (
-        <div style={helpStyle}>
-          Subagents are stored as <code>subagents/&lt;name&gt;.md</code> with YAML frontmatter. Link a
-          Workspace under Definition → Workspace to share them across agents.
+        <div className="border-b border-border bg-surface-2 px-6 py-2 text-xs leading-5 text-text-3">
+          子智能体以 <code>subagents/&lt;name&gt;.md</code>（带 YAML frontmatter）的形式存储。在「定义 → 工作区」关联工作区后可跨智能体共享。
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="min-h-0 flex-1">
         <SubagentPanel onChanged={() => { void refreshAgent?.(); }} agentId={agentId} readOnly={!!linked || !canEdit} />
       </div>
     </div>
