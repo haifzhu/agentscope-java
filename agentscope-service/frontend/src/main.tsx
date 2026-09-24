@@ -40,6 +40,7 @@ const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const AgentsHubPage = React.lazy(() => import('./pages/AgentsHubPage'));
 const AgentCatalogDetailPage = React.lazy(() => import('./features/build/agents/AgentCatalogDetailPage'));
+const AgentDefinitionPanel = React.lazy(() => import('./features/build/agents/AgentDefinitionPanel'));
 const AgentCreatePage = React.lazy(() => import('./pages/AgentCreatePage'));
 const WorkspacesHubPage = React.lazy(() => import('./pages/WorkspacesHubPage'));
 const WorkspaceDetailPage = React.lazy(() => import('./pages/WorkspaceDetailPage'));
@@ -93,6 +94,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/** 旧版 /definition/<section> 深链 → ?tab=definition&section=<section>（C6 层级压缩后保留可达性）。 */
+function LegacyDefinitionSectionRedirect() {
+  const { agentId = '', section = 'behavior' } = useParams();
+  const [searchParams] = useSearchParams();
+  const next = new URLSearchParams(searchParams);
+  next.set('tab', 'definition');
+  next.set('section', section);
+  return <Navigate to={`/agent-center/agents/${encodeURIComponent(agentId)}?${next.toString()}`} replace />;
+}
 
 function RedirectWithSearch({ to, param }: { to: string; param?: string }) {
   const { search } = useLocation();
@@ -219,14 +230,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route index element={<Navigate to="agents" replace />} />
               <Route path="agents" element={<AgentsHubPage />} />
               <Route path="agents/new" element={<AgentCreatePage />} />
+              {/* 旧版定义子路由深链：必须作为兄弟路由，父级仅在定义标签下渲染 Outlet */}
+              <Route path="agents/:agentId/definition/:section" element={<LegacyDefinitionSectionRedirect />} />
               <Route path="agents/:agentId" element={<AgentCatalogDetailPage />}>
-                <Route path="definition" element={<Navigate to="behavior" replace />} />
-                <Route path="definition/behavior" element={<AgentSettingsPage />} />
-                <Route path="definition/workspace" element={<AgentWorkspacePage />} />
-                <Route path="definition/skills" element={<AgentSkillsPage />} />
-                <Route path="definition/tools" element={<AgentToolsPage />} />
-                <Route path="definition/subagents" element={<AgentSubagentsPage />} />
-                <Route path="definition/versions" element={<AgentSettingsPage section="versions" />} />
+                {/* C6 层级压缩：定义六项共用一个挂载点，由 ?section= 横向标签切换内容 */}
+                <Route path="definition" element={<AgentDefinitionPanel />} />
                 <Route path="connections/channels" element={<AgentChannelsPage />} />
               </Route>
               <Route path="agents/:agentId/sessions/:sessionId" element={<OperateSessionDetailPage />} />

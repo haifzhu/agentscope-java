@@ -61,9 +61,9 @@ describe("Unified Agent navigation", () => {
   it("redirects legacy management sections without dropping scope", () => {
     expect(
       legacyAgentManagePath("a", "settings", "?tenant=t&namespace=n"),
-    ).toBe("/agent-center/agents/a/definition/behavior?tenant=t&namespace=n");
+    ).toBe("/agent-center/agents/a?tenant=t&namespace=n&tab=definition&section=behavior");
     expect(legacyAgentManagePath("a", "skills")).toBe(
-      "/agent-center/agents/a/definition/skills",
+      "/agent-center/agents/a?tab=definition&section=skills",
     );
     expect(legacyAgentManagePath("a", "channels")).toBe(
       "/agent-center/agents/a?tab=connections&connection=channels",

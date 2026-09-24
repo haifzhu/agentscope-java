@@ -28,23 +28,37 @@ export interface AgentDetailTab {
   label: string;
 }
 
+/** 定义六项（PRD 5.7.2）：横向标签切换，不再产生第三层导航。 */
 export const definitionSections = [
-  { id: "behavior", label: "Behavior" },
-  { id: "workspace", label: "Workspace" },
-  { id: "skills", label: "Skills" },
-  { id: "tools", label: "Tools & MCP" },
-  { id: "subagents", label: "Subagents" },
-  { id: "versions", label: "Versions" },
+  { id: "behavior", label: "行为" },
+  { id: "workspace", label: "工作区" },
+  { id: "skills", label: "技能" },
+  { id: "tools", label: "工具与 MCP" },
+  { id: "subagents", label: "子智能体" },
+  { id: "versions", label: "版本" },
 ] as const;
+
+export type DefinitionSectionId = (typeof definitionSections)[number]["id"];
+
+export function resolveDefinitionSection(requested: string | null): DefinitionSectionId {
+  return definitionSections.some(item => item.id === requested) ? (requested as DefinitionSectionId) : "behavior";
+}
+
+/** 运行时形态的业务语言解释（PRD 5.7.2）。 */
+export const runtimeKindPresentation: Record<string, { label: string; description: string }> = {
+  managed: { label: "平台托管", description: "平台负责运行智能体，你只需配置它的能力" },
+  "external-application": { label: "外部应用", description: "你自己开发的应用，注册到平台统一管理" },
+  "hosted-runtime": { label: "托管运行时", description: "把成熟的编程助手装到你的机器上，由平台统一调度" },
+};
 
 export function agentDetailTabs(runtimeKind?: string): AgentDetailTab[] {
   return [
-    { id: "overview", label: "Overview" },
-    { id: "activity", label: "Activity" },
-    { id: "definition", label: "Definition" },
-    { id: "runtime", label: "Runtime configuration" },
-    { id: "connections", label: "Connections" },
-    { id: "settings", label: "Settings" },
+    { id: "overview", label: "总览" },
+    { id: "activity", label: "动态" },
+    { id: "definition", label: "定义" },
+    { id: "runtime", label: "运行状态" },
+    { id: "connections", label: "连接" },
+    { id: "settings", label: "设置" },
   ];
 }
 
@@ -89,7 +103,10 @@ export function legacyAgentManagePath(
     params.set("connection", "channels");
   } else if (section === "chat")
     return `/work/chat?${new URLSearchParams({ ...Object.fromEntries(params), agent: agentId })}`;
-  else
-    path += `/definition/${definitionSections.some((item) => item.id === section) ? section : "behavior"}`;
+  else {
+    // C6 层级压缩：定义六项以 ?tab=definition&section= 直达，不再走子路由。
+    params.set("tab", "definition");
+    params.set("section", definitionSections.some((item) => item.id === section) ? section : "behavior");
+  }
   return `${path}${params.size ? `?${params}` : ""}`;
 }

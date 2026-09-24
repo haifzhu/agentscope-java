@@ -71,6 +71,8 @@ import {
   agentServicePath,
   definitionSections,
   resolveAgentDetailTab,
+  resolveDefinitionSection,
+  runtimeKindPresentation,
   type AgentDetailTabId,
 } from "./agentNavigation";
 import { canEditAgentDefinition } from "./agentAccess";
@@ -163,16 +165,12 @@ export default function AgentCatalogDetailPage() {
   });
   const runtimeKind = agent.data?.runtimeKind;
   const base = agentServicePath(agentId);
-  const definition = location.pathname.includes("/definition");
   const channels = location.pathname.endsWith("/connections/channels");
-  const section = definition
-    ? location.pathname.split("/").pop() || "behavior"
-    : "";
-  const tab = definition
-    ? "definition"
-    : channels
-      ? "connections"
-      : resolveAgentDetailTab(params.get("tab"), runtimeKind);
+  // C6：定义六项改由 ?section= 横向标签承载，路由不再有第三层。
+  const section = resolveDefinitionSection(params.get("section"));
+  const tab = channels
+    ? "connections"
+    : resolveAgentDetailTab(params.get("tab"), runtimeKind);
   const active = tab === "overview" || tab === "activity";
   const activity = useAgentActivity(agentId, active);
   const overview = useQuery({
@@ -237,13 +235,16 @@ export default function AgentCatalogDetailPage() {
     options: Record<string, string> = {},
   ) => {
     const query = new URLSearchParams();
-    if (next !== "overview" && next !== "definition") query.set("tab", next);
-    Object.entries(options).forEach(([key, value]) => query.set(key, value));
-    navigate(
-      scope.scopedPath(
-        `${base}${next === "definition" ? "/definition/behavior" : ""}${query.size ? `?${query}` : ""}`,
-      ),
-    );
+    if (next === "definition") {
+      query.set("tab", "definition");
+      query.set("section", options.section ?? "behavior");
+    } else if (next !== "overview") {
+      query.set("tab", next);
+    }
+    Object.entries(options).forEach(([key, value]) => {
+      if (key !== "section") query.set(key, value);
+    });
+    navigate(scope.scopedPath(`${base}${query.size ? `?${query}` : ""}`));
   };
   useEffect(() => {
     setRegistrationCredential("");
@@ -255,13 +256,13 @@ export default function AgentCatalogDetailPage() {
     void queryClient.invalidateQueries({
       queryKey: ["catalog-agent", agentId],
     });
-  }, [location.pathname, agentId, queryClient]);
+  }, [location, agentId, queryClient]);
 
   if (agent.isPending)
     return (
       <Page>
         <p role="status" className="text-sm text-muted-foreground">
-          Loading Agent…
+          正在加载智能体…
         </p>
       </Page>
     );
@@ -269,22 +270,15 @@ export default function AgentCatalogDetailPage() {
     return (
       <Page>
         <EmptyState
-          title="Agent unavailable"
+          title="智能体不可用"
           description={
             agent.error instanceof Error
               ? agent.error.message
-              : "Unable to load this Agent."
+              : "该智能体加载失败。"
           }
         />
-        <Button onClick={() => void agent.refetch()}>Retry</Button>
+        <Button onClick={() => void agent.refetch()}>重试</Button>
       </Page>
-    );
-  if (
-    params.get("tab") === "definition" &&
-    !definition
-  )
-    return (
-      <Navigate replace to={scope.scopedPath(`${base}/definition/behavior`)} />
     );
   if (
     params.get("connection") === "channels" &&
@@ -296,6 +290,7 @@ export default function AgentCatalogDetailPage() {
     );
   const value = agent.data;
   const currentOverview = overview.data;
+  const runtimePresentation = runtimeKindPresentation[runtimeKind || ""];
   const editableDefinition = canEdit;
   if (channels && runtimeKind !== "managed")
     return <Navigate replace to={scope.scopedPath(base)} />;
@@ -317,11 +312,11 @@ export default function AgentCatalogDetailPage() {
           to={scope.scopedPath("/agent-center/agents")}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Agents
+          ← 智能体
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-indigo-600">
+            <span className="rounded-xl border border-primary-soft bg-primary-soft p-3 text-primary-text">
               <Bot className="h-6 w-6" />
             </span>
             <div className="min-w-0">
@@ -329,7 +324,7 @@ export default function AgentCatalogDetailPage() {
                 {value.name}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge>{bindingLabel(runtimeKind || "Agent")}</Badge>
+                <Badge title={runtimePresentation?.description}>{runtimePresentation?.label ?? bindingLabel(runtimeKind || "智能体")}</Badge>
                 <Badge tone={readinessTone(currentOverview?.readiness.state)}>
                   {currentOverview?.readiness.state || "Observing"}
                 </Badge>
@@ -369,22 +364,22 @@ export default function AgentCatalogDetailPage() {
               }
             >
               <MessageSquare className="h-4 w-4" />
-              Chat
+              对话
             </Button>
             {runtimeKind === "managed" && editableDefinition && (
               <Button variant="outline" onClick={() => setShareOpen(true)}>
                 <Share2 className="h-4 w-4" />
-                Share
+                分享
               </Button>
             )}
             <Button
               variant="outline"
-              aria-label="Refresh Agent"
-              title="Refresh current data"
+              aria-label="刷新智能体"
+              title="刷新当前数据"
               onClick={() => void refresh()}
             >
               <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">刷新</span>
             </Button>
           </div>
         </div>
@@ -395,7 +390,7 @@ export default function AgentCatalogDetailPage() {
         )}
       </header>
       <nav
-        aria-label="Agent detail"
+        aria-label="智能体详情"
         className="flex gap-1 overflow-x-auto border-b border-border"
       >
         {agentDetailTabs(runtimeKind).map((item) => (
@@ -411,7 +406,7 @@ export default function AgentCatalogDetailPage() {
         ))}
       </nav>
       {(toggle.isError || rotateCredential.isError) && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-text">
           {String(toggle.error || rotateCredential.error)}
         </p>
       )}
@@ -558,26 +553,27 @@ export default function AgentCatalogDetailPage() {
         />
       )}
       {tab === "definition" && (
-        <div className="grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div className="space-y-4">
           <nav
-            aria-label="Agent definition"
-            className="flex gap-1 overflow-x-auto lg:flex-col"
+            aria-label="智能体定义"
+            className="flex gap-1 overflow-x-auto rounded-xl bg-surface-3 p-1"
           >
             {definitionSections.map((item) => (
-              <Link
+              <button
                 key={item.id}
+                type="button"
                 aria-current={section === item.id ? "page" : undefined}
-                to={scope.scopedPath(`${base}/definition/${item.id}`)}
-                className={`shrink-0 rounded-lg px-4 py-2.5 text-sm ${section === item.id ? "bg-indigo-50 font-semibold text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                onClick={() => setTab("definition", { section: item.id })}
+                className={`shrink-0 rounded-lg px-3.5 py-2 text-sm transition-colors ${section === item.id ? "bg-surface font-semibold text-text shadow-sm" : "text-text-3 hover:text-text"}`}
               >
                 {item.label}
-              </Link>
+              </button>
             ))}
           </nav>
           <div className="min-w-0 space-y-4">
             {!editableDefinition && (
               <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                Read-only definition. Editing requires access to this Agent.
+                只读定义。编辑需要该智能体的访问权限。
               </p>
             )}
             {(section === "workspace" || value.version == null) && <WorkspaceBindingPanel agent={value} canEdit={editableDefinition} onSaved={refreshAgent} />}
@@ -596,7 +592,7 @@ export default function AgentCatalogDetailPage() {
       {tab === "runtime" && (
         <section className="grid gap-5 border-t pt-5">
           <div>
-            <h2 className="text-lg font-semibold">Runtime configuration</h2>
+            <h2 className="text-lg font-semibold">运行状态配置</h2>
             <RuntimeWorkspacesPanel agent={value} />
             <p className="mt-1 text-sm text-muted-foreground">
               Execution environment, availability and runtime connections.
@@ -674,7 +670,7 @@ export default function AgentCatalogDetailPage() {
                             onClick={() =>
                               navigate(
                                 scope.scopedPath(
-                                  `/agent-center/agents/${agentId}/definition/behavior`,
+                                  `/agent-center/agents/${agentId}?tab=definition&section=behavior`,
                                 ),
                               )
                             }
@@ -770,7 +766,7 @@ export default function AgentCatalogDetailPage() {
                 variant={channels ? "ghost" : "secondary"}
                 onClick={() => setTab("connections")}
               >
-                Published APIs
+                已发布 API
               </Button>
               <Button
                 size="sm"
@@ -779,7 +775,7 @@ export default function AgentCatalogDetailPage() {
                   navigate(scope.scopedPath(`${base}/connections/channels`))
                 }
               >
-                Channels
+                渠道绑定
               </Button>
             </div>
           )}
@@ -818,7 +814,7 @@ export default function AgentCatalogDetailPage() {
               </Button>
               {registrationCredential && (
                 <div className="space-y-2">
-                  <p className="text-sm text-amber-700">
+                  <p className="text-sm text-warning-text">
                     Save this credential. The plaintext value is shown only
                     once.
                   </p>
@@ -839,8 +835,8 @@ export default function AgentCatalogDetailPage() {
           </Card>
         )}
       {tab === "runtime" && (bindings.isError || instances.isError) && (
-        <p role="alert" className="text-sm text-amber-700">
-          Runtime configuration could not be fully loaded. Use Refresh to retry.
+        <p role="alert" className="text-sm text-warning-text">
+          运行状态配置未能完整加载，请刷新重试。
         </p>
       )}
       {tab === "settings" &&
