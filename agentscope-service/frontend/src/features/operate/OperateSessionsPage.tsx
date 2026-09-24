@@ -29,6 +29,10 @@ import { useControlPlaneScope } from '@/app/ScopeContext';
 const PAGE_SIZE = 50;
 const PHASES = ['active', 'idle', 'compressing', 'archived', 'terminated'] as const;
 
+const PHASE_LABELS: Record<string, string> = {
+  active: '活跃', idle: '空闲', compressing: '压缩中', archived: '已归档', terminated: '已终止',
+};
+
 function isPhase(v: string): v is (typeof PHASES)[number] {
   return (PHASES as readonly string[]).includes(v);
 }
@@ -104,24 +108,24 @@ export default function OperateSessionsPage() {
     .sort();
 
   const canPrev = offset > 0;
-  const canNext = list.length >= PAGE_SIZE;
+  const can下一页 = list.length >= PAGE_SIZE;
 
   return (
     <Page>
       <PageHeader
-        title="Sessions"
-        description="Conversation context across Agents and execution backends."
+        title="会话运维"
+        description="跨智能体与执行后端的会话上下文。"
       />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Agent</span>
+          <span className="text-muted-foreground">智能体</span>
           <select
             className="h-10 min-w-[10rem] rounded-lg border border-border bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={agent}
             onChange={(e) => updateAgent(e.target.value)}
           >
-            <option value="">All agents</option>
+            <option value="">全部智能体</option>
             {agentOptions.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -131,49 +135,49 @@ export default function OperateSessionsPage() {
         </label>
 
         <label className="grid gap-1 text-sm">
-          <span className="text-muted-foreground">Phase</span>
+          <span className="text-muted-foreground">状态</span>
           <select
             className="h-10 min-w-[9rem] rounded-lg border border-border bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={phase}
             onChange={(e) => updatePhase(e.target.value)}
           >
-            <option value="">All phases</option>
+            <option value="">全部状态</option>
             {PHASES.map((p) => (
               <option key={p} value={p}>
-                {p}
+                {PHASE_LABELS[p]}
               </option>
             ))}
           </select>
         </label>
 
         <label className="grid min-w-[16rem] flex-1 gap-1 text-sm">
-          <span className="text-muted-foreground">Search</span>
+          <span className="text-muted-foreground">搜索</span>
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter this page by session id, agent…"
+            placeholder="按会话 ID、智能体筛选本页…"
           />
         </label>
       </div>
 
       {list.length === 0 && !sessions.isLoading ? (
-        <EmptyState title="No sessions" description="No sessions match the current filters." />
+        <EmptyState title="暂无会话" description="当前筛选条件下没有会话。" />
       ) : filtered.length === 0 && !sessions.isLoading ? (
-        <EmptyState title="No matches" description={`No sessions on this page match “${q.trim()}”.`} />
+        <EmptyState title="没有匹配" description={`本页没有匹配「${q.trim()}」的会话。`} />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-1">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <thead className="border-b border-border bg-surface-2/70 text-[11px] font-semibold tracking-[0.08em] text-text-3">
                 <tr>
-                  <th className="px-5 py-3.5 font-medium">Agent</th>
-                  <th className="px-5 py-3.5 font-medium">Session</th>
-                  <th className="px-5 py-3.5 font-medium">Phase</th>
-                  <th className="px-5 py-3.5 font-medium">Pressure</th>
-                  <th className="px-5 py-3.5 font-medium">Messages</th>
+                  <th className="px-5 py-3.5 font-medium">智能体</th>
+                  <th className="px-5 py-3.5 font-medium">会话</th>
+                  <th className="px-5 py-3.5 font-medium">状态</th>
+                  <th className="px-5 py-3.5 font-medium">上下文压力</th>
+                  <th className="px-5 py-3.5 font-medium">消息数</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {filtered.map((s) => (
                   <tr key={s.id || `${s.agentName}/${s.sessionId}`} className="hover:bg-muted/40">
                     <td className="px-5 py-3.5 font-medium">{s.agentName}</td>
@@ -183,7 +187,7 @@ export default function OperateSessionsPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3.5">
-                      <Badge tone={phaseTone(s.phase)}>{s.phase}</Badge>
+                      <Badge tone={phaseTone(s.phase)}>{PHASE_LABELS[s.phase] ?? s.phase}</Badge>
                     </td>
                     <td className="px-5 py-3.5">
                       <PressureGauge value={s.snapshot?.contextPressure} />
@@ -199,8 +203,8 @@ export default function OperateSessionsPage() {
 
           <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
             <span>
-              Showing {offset + 1}–{offset + list.length}
-              {q.trim() ? ` · ${filtered.length} match search` : ''}
+              显示第 {offset + 1}–{offset + list.length} 条
+              {q.trim() ? ` · ${filtered.length} 条匹配搜索` : ''}
             </span>
             <div className="flex gap-2">
               <Button
@@ -209,15 +213,15 @@ export default function OperateSessionsPage() {
                 disabled={!canPrev || sessions.isFetching}
                 onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
               >
-                Previous
+                上一页
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!canNext || sessions.isFetching}
+                disabled={!can下一页 || sessions.isFetching}
                 onClick={() => setOffset((o) => o + PAGE_SIZE)}
               >
-                Next
+                下一页
               </Button>
             </div>
           </div>

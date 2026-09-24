@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CapabilityGate, DisabledAction } from '@/components/CapabilityGate';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { Page, PageHeader } from '@/components/Page';
 import { useControlPlaneScope } from '@/app/ScopeContext';
@@ -68,6 +69,8 @@ export default function OperateSessionDetailPage() {
   const qc = useQueryClient();
   const [contextOpen, setContextOpen] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
+  // C9：危险操作三档分级 —— 中危（中止本轮）与高危（终止会话）需要二次确认。
+  const [confirmAction, setConfirmAction] = useState<'abort' | 'terminate' | null>(null);
   const [draft, setDraft] = useState('');
 
   const session = useQuery({
@@ -195,7 +198,7 @@ export default function OperateSessionDetailPage() {
   if (session.isError) {
     return (
       <Page>
-        <EmptyState title="Session not found" description={String(session.error)} />
+        <EmptyState title="未找到会话" description={String(session.error)} />
       </Page>
     );
   }
@@ -227,13 +230,13 @@ export default function OperateSessionDetailPage() {
     <Page>
       <div>
         <Link to={scope.scopedPath(agentId ? `/agent-center/agents/${encodeURIComponent(agentId)}?tab=activity&view=sessions` : '/work/sessions')} className="text-sm text-muted-foreground hover:text-foreground">
-          ← {agentId ? 'Agent activity' : 'Sessions'}
+          ← {agentId ? '智能体动态' : '会话运维'}
         </Link>
         <PageHeader
           className="mt-2"
           title={sessionId}
           description={`${s?.agentName}${scope.selectorVisible ? ` · ${s?.namespace}` : ''} · ${s?.framework || 'framework n/a'}${contractLevel ? ` · L${contractLevel}` : ''}${selectedTurnIndex != null ? ` · turn #${selectedTurnIndex}` : ''}`}
-          actions={agentScopedReadOnly ? <Badge tone="info">Agent-scoped · read only</Badge> : (
+          actions={agentScopedReadOnly ? <Badge tone="info">智能体视图 · 只读</Badge> : (
             <>
               <CapabilityGate contractLevel={contractLevel} capabilities={capabilities} action="compress">
                 {(enabled, tip) =>
@@ -248,7 +251,7 @@ export default function OperateSessionDetailPage() {
                       }}
                     />
                   ) : (
-                    <DisabledAction label="Compress" tip={tip} />
+                    <DisabledAction label="压缩" tip={tip} />
                   )
                 }
               </CapabilityGate>
@@ -259,7 +262,7 @@ export default function OperateSessionDetailPage() {
                   disabled={archive.isPending}
                   onClick={() => archive.mutate()}
                 >
-                  Archive
+                  归档
                 </Button>
               )}
               {canRestore && (
@@ -269,19 +272,19 @@ export default function OperateSessionDetailPage() {
                   disabled={restore.isPending}
                   onClick={() => restore.mutate()}
                 >
-                  Restore
+                  恢复
                 </Button>
               )}
               <CapabilityGate contractLevel={contractLevel} capabilities={capabilities} action="abort">
                 {(enabled, tip) =>
                   enabled && !readOnlyOps ? (
-                    <Button size="sm" variant="outline" disabled={abort.isPending} onClick={() => abort.mutate()}>
-                      Abort turn
+                    <Button size="sm" variant="outline" disabled={abort.isPending} onClick={() => setConfirmAction('abort')}>
+                      中止本轮
                     </Button>
                   ) : (
                     <DisabledAction
-                      label="Abort turn"
-                      tip={readOnlyOps ? `Session is ${phase}` : tip}
+                      label="中止本轮"
+                      tip={readOnlyOps ? `会话当前状态：${phase}` : tip}
                     />
                   )
                 }
@@ -294,7 +297,7 @@ export default function OperateSessionDetailPage() {
                     disabled={readOnlyOps || planMode.isPending || planActive}
                     onClick={() => planMode.mutate(true)}
                   >
-                    Enter plan
+                    进入规划
                   </Button>
                   <Button
                     size="sm"
@@ -302,7 +305,7 @@ export default function OperateSessionDetailPage() {
                     disabled={readOnlyOps || planMode.isPending || !planActive}
                     onClick={() => planMode.mutate(false)}
                   >
-                    Exit plan
+                    退出规划
                   </Button>
                 </>
               )}
@@ -313,13 +316,13 @@ export default function OperateSessionDetailPage() {
                       size="sm"
                       variant="destructive"
                       disabled={terminate.isPending}
-                      onClick={() => terminate.mutate()}
+                      onClick={() => setConfirmAction('terminate')}
                     >
-                      Terminate
+                      终止会话
                     </Button>
                   ) : (
-                    <Button size="sm" variant="destructive" disabled title={readOnlyOps ? `Session is ${phase}` : tip}>
-                      Terminate
+                    <Button size="sm" variant="destructive" disabled title={readOnlyOps ? `会话当前状态：${phase}` : tip}>
+                      终止会话
                     </Button>
                   )
                 }
@@ -342,7 +345,7 @@ export default function OperateSessionDetailPage() {
           : sendMessage.error
             ? String(sendMessage.error)
             : null)}
-        emptyMessage="No conversation messages have been recorded for this session."
+        emptyMessage="该会话尚未记录任何对话消息。"
         hasEarlierMessages={eventTimeline.hasEarlier}
         loadingEarlierMessages={eventTimeline.loadingEarlier}
         onLoadEarlierMessages={() => void eventTimeline.loadEarlier()}
@@ -356,16 +359,16 @@ export default function OperateSessionDetailPage() {
             await sendMessage.mutateAsync(content);
           },
           busy: sendMessage.isPending,
-          placeholder: 'Send a message to this session…',
+          placeholder: '向该会话发送消息…',
         } : undefined}
       />
 
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
-            <CardTitle>Context</CardTitle>
+            <CardTitle>上下文</CardTitle>
             <CardDescription>
-              Inspect the instructions, tools and messages available to the next model call.
+              查看下一次模型调用可用的指令、工具与消息。
             </CardDescription>
           </div>
           <Button
@@ -374,30 +377,30 @@ export default function OperateSessionDetailPage() {
             disabled={!canQueryContext(capabilities) || context.isLoading || context.isError}
             onClick={() => setContextOpen(true)}
           >
-            View
+            查看
           </Button>
         </CardHeader>
         <CardContent>
           {!sessionReady || session.isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">加载中…</p>
           ) : !canQueryContext(capabilities) ? (
-            <p className="text-sm text-muted-foreground">This runtime does not provide a context inspection capability.</p>
+            <p className="text-sm text-muted-foreground">该运行时未提供上下文查看能力。</p>
           ) : context.isError ? (
-            <p className="text-sm text-red-600">Failed to load context.</p>
+            <p className="text-sm text-red-600">上下文加载失败。</p>
           ) : context.isLoading || (context.isFetching && !context.data) ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">加载中…</p>
           ) : !context.data || !ctxSummary ? (
-            <p className="text-sm text-muted-foreground">No context.</p>
+            <p className="text-sm text-muted-foreground">暂无上下文。</p>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
-              {ctxSummary.isCompacted && <Badge tone="warning">compacted</Badge>}
-              {ctxSummary.planActive && <Badge tone="info">plan mode</Badge>}
+              {ctxSummary.isCompacted && <Badge tone="warning">已压缩</Badge>}
+              {ctxSummary.planActive && <Badge tone="info">规划模式</Badge>}
               {ctxSummary.model && <Badge tone="info">{ctxSummary.model}</Badge>}
               <span className="text-sm text-muted-foreground">
-                {ctxSummary.messageCount} effective msgs
+                {ctxSummary.messageCount} 条有效消息
                 {ctxSummary.toolCount ? ` · ${ctxSummary.toolCount} tools` : ''}
                 {ctxSummary.totalTokens != null
-                  ? ` · window ${ctxSummary.totalTokens.toLocaleString()}${ctxSummary.maxTokens != null ? ` / ${ctxSummary.maxTokens.toLocaleString()}` : ''}`
+                  ? ` · 窗口 ${ctxSummary.totalTokens.toLocaleString()}${ctxSummary.maxTokens != null ? ` / ${ctxSummary.maxTokens.toLocaleString()}` : ''}`
                   : ''}
               </span>
             </div>
@@ -408,16 +411,16 @@ export default function OperateSessionDetailPage() {
       <Dialog open={contextOpen} onOpenChange={setContextOpen}>
         <DialogContent size="xl">
           <DialogHeader>
-            <DialogTitle>Context</DialogTitle>
+            <DialogTitle>上下文</DialogTitle>
             <DialogDescription>
-              View the latest reported model context, including instructions, tools and messages.
+              查看最近上报的模型上下文，包括指令、工具与消息。
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <ContextPanel
               data={context.data}
               unavailableReason={
-                !canQueryContext(capabilities) ? 'This runtime does not provide a context inspection capability.' : undefined
+                !canQueryContext(capabilities) ? '该运行时未提供上下文查看能力。' : undefined
               }
               error={context.isError}
               loading={context.isLoading}
@@ -429,15 +432,15 @@ export default function OperateSessionDetailPage() {
       {canQueryTasks(capabilities) && (
         <Card>
           <CardHeader>
-            <CardTitle>Todo</CardTitle>
+            <CardTitle>待办</CardTitle>
           </CardHeader>
           <CardContent>
             {tasks.isError ? (
-              <p className="text-sm text-muted-foreground">Todo endpoint unavailable.</p>
+              <p className="text-sm text-muted-foreground">待办接口不可用。</p>
             ) : tasks.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <p className="text-sm text-muted-foreground">加载中…</p>
             ) : taskList.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No todos.</p>
+              <p className="text-sm text-muted-foreground">暂无待办。</p>
             ) : (
               <div className="space-y-2.5">
                 {taskList.map((t, i) => {
@@ -461,15 +464,15 @@ export default function OperateSessionDetailPage() {
       {canQuerySubagentTasks(capabilities) && (
         <Card>
           <CardHeader>
-            <CardTitle>Background tasks</CardTitle>
+            <CardTitle>后台任务</CardTitle>
           </CardHeader>
           <CardContent>
             {subagentTasks.isError ? (
-              <p className="text-sm text-muted-foreground">Background tasks unavailable.</p>
+              <p className="text-sm text-muted-foreground">后台任务接口不可用。</p>
             ) : subagentTasks.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <p className="text-sm text-muted-foreground">加载中…</p>
             ) : bgTaskList.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No background subagent tasks.</p>
+              <p className="text-sm text-muted-foreground">暂无子智能体后台任务。</p>
             ) : (
               <div className="space-y-2.5">
                 {bgTaskList.map((t, i) => (
@@ -479,7 +482,7 @@ export default function OperateSessionDetailPage() {
                     </div>
                     <div className="mt-0.5 text-sm text-muted-foreground">
                       {String(t.status || t.state || '')}
-                      {t.completed ? ' · completed' : ''}
+                      {t.completed ? ' · 已完成' : ''}
                     </div>
                   </div>
                 ))}
@@ -489,6 +492,29 @@ export default function OperateSessionDetailPage() {
         </Card>
       )}
 
+      <ConfirmDialog
+        open={confirmAction === 'abort'}
+        onOpenChange={open => { if (!open) { setConfirmAction(null); abort.reset(); } }}
+        title="中止本轮执行？"
+        description="中档危险操作：当前正在执行的轮次会被打断，会话本身保留，可继续发起新一轮。"
+        dangerLevel="warning"
+        confirmLabel="确认中止"
+        cancelLabel="取消"
+        busy={abort.isPending}
+        onConfirm={() => { abort.mutate(); setConfirmAction(null); }}
+      />
+      <ConfirmDialog
+        open={confirmAction === 'terminate'}
+        onOpenChange={open => { if (!open) { setConfirmAction(null); terminate.reset(); } }}
+        title="终止该会话？"
+        description="高危操作：终止后本轮会话不可恢复，历史记录仍可查看。归档前请确认没有未保存的工作。"
+        dangerLevel="danger"
+        confirmLabel="确认终止"
+        cancelLabel="取消"
+        busy={terminate.isPending}
+        onConfirm={() => { terminate.mutate(); setConfirmAction(null); }}
+      />
+
       {(commands.data?.commands || []).length > 0 && (
         <Card>
           <button
@@ -497,10 +523,9 @@ export default function OperateSessionDetailPage() {
             onClick={() => setCommandsOpen((v) => !v)}
           >
             <span className="font-mono text-muted-foreground">{commandsOpen ? '▾' : '▸'}</span>
-            <CardTitle className="text-base">Commands</CardTitle>
+            <CardTitle className="text-base">命令</CardTitle>
             <span className="text-sm text-muted-foreground">
-              {(commands.data?.commands || []).length} command
-              {(commands.data?.commands || []).length === 1 ? '' : 's'}
+              {(commands.data?.commands || []).length} 条命令
             </span>
           </button>
           {commandsOpen && (
