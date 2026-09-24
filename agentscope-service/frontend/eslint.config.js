@@ -37,6 +37,15 @@ const CONTRACT_ENFORCED = [
   // JICH-337：试点页与 AppShell 纳入 error 级契约（试点结论建议）
   'src/features/work/WorkOverviewPage.tsx',
   'src/app/AppShell.tsx',
+  // JICH-338 阶段 C 第一批（C1–C6）：以下域已完成令牌化，回归即报错
+  'src/features/work/WorkSurface.tsx',
+  'src/features/work/WorkActivityPage.tsx',
+  'src/features/inbox/**/*.{ts,tsx}',
+  'src/features/approvals/**/*.{ts,tsx}',
+  'src/features/issues/IssuesPage.tsx',
+  'src/features/issues/IssueDetailPage.tsx',
+  'src/features/issues/IssueSharing.tsx',
+  'src/features/issues/IssueAcceptanceEditor.tsx',
 ];
 
 export default tseslint.config(

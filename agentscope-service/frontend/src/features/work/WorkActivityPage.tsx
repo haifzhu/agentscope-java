@@ -163,7 +163,7 @@ export default function WorkActivityPage() {
 
       <div className="flex justify-end">
         <label className="relative w-full sm:w-80">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-4" />
           <Input className="pl-9 shadow-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search activity" />
         </label>
       </div>
@@ -174,15 +174,15 @@ export default function WorkActivityPage() {
             title="Delivery failures"
             description="Control-plane events that exhausted automatic retries. Replay after the underlying problem is resolved."
           />
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-border">
             {deadLetters.data.items.map((event) => (
               <div key={event.id} className="flex flex-wrap items-center gap-3 px-5 py-4 text-sm">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning-text">
                   <AlertTriangle className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-slate-900">{event.eventType}</div>
-                  <div className="truncate text-xs text-slate-500">
+                  <div className="font-medium text-text">{event.eventType}</div>
+                  <div className="truncate text-xs text-text-3">
                     {event.aggregateType}/{event.aggregateId} · attempts {event.attempts} · {event.lastError}
                   </div>
                 </div>
@@ -208,32 +208,32 @@ export default function WorkActivityPage() {
           <div>
             {groups.map((group) => (
               <section key={group.label}>
-                <div className="border-y border-slate-100 bg-slate-50/70 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 first:border-t-0">
+                <div className="border-y border-border bg-surface-2 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-4 first:border-t-0">
                   {group.label}
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-border">
                   {group.items.map((activity) => {
                     const Icon = actionIcon(activity.action);
                     return (
                       <Link
                         key={activity.id}
                         to={scope.scopedPath(`/work/issues/${activity.issue.id}`)}
-                        className="group flex gap-3 px-5 py-4 transition hover:bg-slate-50/70"
+                        className="group flex gap-3 px-5 py-4 transition hover:bg-hover"
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-text-3">
                           <Icon className="h-3.5 w-3.5" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm leading-5 text-slate-600">
-                            <strong className="font-semibold text-slate-900">{actorName(activity, identities)}</strong> {activityText(activity, identities)}
+                          <p className="text-sm leading-5 text-text-2">
+                            <strong className="font-semibold text-text">{actorName(activity, identities)}</strong> {activityText(activity, identities)}
                           </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                            <span className="truncate font-medium text-slate-500 group-hover:text-indigo-700">{activity.issue.title}</span>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-4">
+                            <span className="truncate font-medium text-text-3 group-hover:text-primary-text">{activity.issue.title}</span>
                             <span aria-hidden="true">·</span>
                             <span className="font-mono">{activity.issue.identifier || activity.issue.id.slice(0, 8)}</span>
                           </div>
                         </div>
-                        <time className="shrink-0 text-xs text-slate-400">{formatRelative(activity.createdAt)}</time>
+                        <time className="shrink-0 text-xs text-text-4">{formatRelative(activity.createdAt)}</time>
                       </Link>
                     );
                   })}

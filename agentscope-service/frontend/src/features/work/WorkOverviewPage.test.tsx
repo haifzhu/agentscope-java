@@ -20,7 +20,7 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import WorkOverviewPage, { METRIC_LINKS, asyncStatusOf, canUseAgentCenter } from './WorkOverviewPage';
+import WorkOverviewPage, { METRIC_LINKS, asyncStatusOf, canSeeOperations, canUseAgentCenter, formatDuration, formatTokens } from './WorkOverviewPage';
 import { ScopeProvider } from '@/app/ScopeContext';
 
 /**
@@ -75,6 +75,31 @@ describe('canUseAgentCenter', () => {
     expect(canUseAgentCenter(['agent_developer'])).toBe(true);
     expect(canUseAgentCenter(['viewer'])).toBe(false);
     expect(canUseAgentCenter([])).toBe(false);
+  });
+});
+
+describe('canSeeOperations (PRD 5.3.3)', () => {
+  it('reserves the operations blocks for operator and admin only', () => {
+    expect(canSeeOperations(['admin'])).toBe(true);
+    expect(canSeeOperations(['Operator'])).toBe(true);
+    expect(canSeeOperations(['agent_developer'])).toBe(false);
+    expect(canSeeOperations(['viewer'])).toBe(false);
+    expect(canSeeOperations([])).toBe(false);
+  });
+});
+
+describe('metric formatting', () => {
+  it('renders a dash rather than a fabricated zero when a metric has no data', () => {
+    expect(formatDuration(null)).toBe('—');
+    expect(formatTokens(null)).toBe('—');
+  });
+  it('scales duration and token units for the metric cards', () => {
+    expect(formatDuration(450)).toBe('450ms');
+    expect(formatDuration(1500)).toBe('1.5s');
+    expect(formatDuration(90_000)).toBe('2min');
+    expect(formatTokens(950)).toBe('950');
+    expect(formatTokens(12_500)).toBe('12.5k');
+    expect(formatTokens(2_400_000)).toBe('2.4M');
   });
 });
 

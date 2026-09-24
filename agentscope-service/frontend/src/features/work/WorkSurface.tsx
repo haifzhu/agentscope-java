@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export function WorkPage({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full bg-surface">
       <div
         className={cn(
           "mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 sm:py-9 lg:px-10",
@@ -45,11 +45,11 @@ export function WorkPageHeader({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-slate-950 sm:text-[32px]">
+        <h1 className="text-[28px] font-semibold tracking-[-0.025em] text-text sm:text-[32px]">
           {title}
         </h1>
         {description && (
-          <p className="mt-1.5 max-w-3xl text-[15px] leading-6 text-slate-500">
+          <p className="mt-1.5 max-w-3xl text-[15px] leading-6 text-text-3">
             {description}
           </p>
         )}
@@ -63,7 +63,7 @@ export function WorkPanel({ className, ...props }: HTMLAttributes<HTMLDivElement
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]",
+        "overflow-hidden rounded-2xl border border-border bg-surface shadow-1",
         className,
       )}
       {...props}
@@ -83,10 +83,10 @@ export function WorkPanelHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4", className)}>
+    <div className={cn("flex items-start justify-between gap-4 border-b border-border px-5 py-4", className)}>
       <div>
-        <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
-        {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+        <h2 className="text-[15px] font-semibold text-text">{title}</h2>
+        {description && <p className="mt-1 text-sm text-text-3">{description}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -134,9 +134,9 @@ export function WorkEmpty({
 }) {
   return (
     <div className={cn("flex min-h-48 flex-col items-center justify-center px-6 py-12 text-center", className)}>
-      <div className="h-10 w-10 rounded-full border border-slate-200 bg-slate-50" />
-      <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
-      <p className="mt-1 max-w-md text-sm leading-6 text-slate-500">{description}</p>
+      <div className="h-10 w-10 rounded-full border border-border bg-surface-2" />
+      <h3 className="mt-4 text-sm font-semibold text-text">{title}</h3>
+      <p className="mt-1 max-w-md text-sm leading-6 text-text-3">{description}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -144,15 +144,15 @@ export function WorkEmpty({
 
 export function WorkLoadingRows({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-slate-100" aria-label="Loading">
+    <div className="divide-y divide-border" aria-label="Loading">
       {Array.from({ length: rows }).map((_, index) => (
         <div key={index} className="flex animate-pulse items-center gap-4 px-5 py-4">
-          <div className="h-8 w-8 rounded-lg bg-slate-100" />
+          <div className="h-8 w-8 rounded-lg bg-surface-3" />
           <div className="flex-1 space-y-2">
-            <div className="h-3 w-2/5 rounded bg-slate-100" />
-            <div className="h-2.5 w-1/4 rounded bg-slate-100" />
+            <div className="h-3 w-2/5 rounded bg-surface-3" />
+            <div className="h-2.5 w-1/4 rounded bg-surface-3" />
           </div>
-          <div className="h-6 w-16 rounded-full bg-slate-100" />
+          <div className="h-6 w-16 rounded-full bg-surface-3" />
         </div>
       ))}
     </div>
