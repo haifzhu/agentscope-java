@@ -236,7 +236,7 @@ export function MembersEditor({
       {canEdit && adding && (
         <form
           onSubmit={submit}
-          className="grid gap-3 rounded-xl border border-border bg-white p-5"
+          className="grid gap-3 rounded-xl border border-border bg-surface p-5"
         >
           <h3 className="font-semibold">Add member</h3>
           <div className="grid gap-3 md:grid-cols-2">

@@ -35,7 +35,7 @@ import { buildInitialTeamMembers } from './teamCreation';
 function TeamCard({ team }: { team: Team }) {
   const scope = useControlPlaneScope();
   return (
-    <Link to={scope.scopedPath(`/agent-center/teams/${team.id}`)} className="block rounded-2xl border border-slate-200/90 bg-white p-5 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <Link to={scope.scopedPath(`/agent-center/teams/${team.id}`)} className="block rounded-2xl border border-border bg-surface p-5 transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{team.name}</h2><p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{team.description || 'No description'}</p></div><Badge>{team.status}</Badge></div>
       <div className="mt-5 text-sm"><span className="text-muted-foreground">Leader</span><div className="mt-1 font-medium"><AgentIdentity agentId={team.leaderAgentId} /></div></div>
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground"><span>{team.members?.length ?? 0} worker roles</span><span>Version {team.version}</span></div>
@@ -90,12 +90,12 @@ export default function TeamsOverviewPage() {
   return (
     <Page className="max-w-[1440px]">
       <PageHeader
-        title="Teams"
-        description="Persistent leader-first multi-Agent services. Assemble a roster and coordination policy, then publish an API Endpoint."
+        title="团队编排"
+        description="常驻的主管式多智能体服务。组建名单与协作策略，即可发布 API 端点。"
         actions={<Button onClick={() => setOpen(!open)}><Plus className="h-4 w-4" />New team</Button>}
       />
       {open && (
-        <form onSubmit={submit} className="grid gap-5 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+        <form onSubmit={submit} className="grid gap-5 rounded-2xl border border-border bg-surface p-6 shadow-1">
           <div><h2 className="text-lg font-semibold">Create Team</h2><p className="mt-1 text-sm text-muted-foreground">Choose a leader and, optionally, the Agents they can delegate work to.</p></div>
           <label className="grid gap-1.5 text-sm font-medium"><span>Name</span><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Team name" required /></label>
           <label className="grid gap-1.5 text-sm font-medium"><span>Description <span className="font-normal text-muted-foreground">(optional)</span></span><Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What is this Team responsible for?" /></label>
@@ -109,7 +109,7 @@ export default function TeamsOverviewPage() {
         </form>
       )}
       {!teams.isLoading && !items.length ? (
-        <EmptyState title="No Teams" description="Create a persistent Team with a leader Agent." />
+        <EmptyState title="暂无团队" description="创建一个由主管智能体带领的常驻团队。" />
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {items.map((team) => <TeamCard key={team.id} team={team} />)}

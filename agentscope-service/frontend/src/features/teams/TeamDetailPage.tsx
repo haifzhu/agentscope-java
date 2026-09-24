@@ -96,8 +96,8 @@ export default function TeamDetailPage() {
     return (
       <Page>
         <EmptyState
-          title="Team unavailable"
-          description={String(detail.error || "The Team could not be loaded.")}
+          title="团队不可用"
+          description={String(detail.error || "团队加载失败。")}
         />
       </Page>
     );
@@ -201,7 +201,7 @@ export default function TeamDetailPage() {
             <button
               key={key}
               onClick={() => selectTab("activity", key as ActivityFilter)}
-              className={`rounded-xl border border-border bg-white px-5 py-4 text-left transition hover:border-primary ${tab === "activity" && filter === key ? "border-primary" : ""}`}
+              className={`rounded-xl border border-border bg-surface px-5 py-4 text-left transition hover:border-primary ${tab === "activity" && filter === key ? "border-primary" : ""}`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-semibold tracking-tight">

@@ -32,35 +32,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MembersEditor } from "./TeamMembersEditor";
 import { teamTone } from "./teamActivity";
+import { LIMIT_DESCRIPTORS, isLimitDefault, limitSummary } from "./limitSummary";
 
-const limits = [
-  [
-    "maxActiveTasks",
-    "Concurrent tasks",
-    "0 uses the default of 32.",
-    undefined,
-  ],
-  ["maxHops", "Delegation hops", "0 uses the default of 8.", 64],
-  [
-    "maxFanout",
-    "Recipients per delegation",
-    "0 adds no Team-specific limit.",
-    256,
-  ],
-  ["maxChildDepth", "Child Issue depth", "0 uses the default of 4.", 32],
-  [
-    "maxChildIssues",
-    "Child Issues per parent",
-    "0 adds no Team-specific limit.",
-    undefined,
-  ],
-  [
-    "maxTaskRetries",
-    "Retries per task",
-    "0 adds no Team-specific limit.",
-    undefined,
-  ],
-] as const;
+const limits = LIMIT_DESCRIPTORS.map((d) => [d.field, d.label, d.zeroMeaning, d.max] as const);
 function patchTeam(team: Team, fields: Record<string, unknown>) {
   return updateTeam(team.id, {
     name: team.name,
@@ -88,18 +62,18 @@ export function TeamStructure({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Team structure</CardTitle>
+        <CardTitle>团队结构</CardTitle>
         <CardDescription>
           {compact
-            ? `${overview.members.length} Agents · Lead coordinates and accepts worker results`
-            : "Configured roles and current runtime readiness. The Lead chooses whom to involve for each request."}
+            ? `${overview.members.length} 个智能体 · 主管协调并验收结果`
+            : "已配置的角色与当前运行时状态。主管按请求挑选参与成员。"}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="rounded-xl border border-border bg-slate-50 p-4">
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
           <button
             onClick={() => setSelected(team.leaderAgentId)}
-            className={`mx-auto block w-full max-w-72 rounded-lg border border-border bg-white p-3 text-left shadow-sm ${selected === team.leaderAgentId ? "border-primary" : ""}`}
+            className={`mx-auto block w-full max-w-72 rounded-lg border border-border bg-surface p-3 text-left shadow-sm ${selected === team.leaderAgentId ? "border-primary" : ""}`}
           >
             <div className="text-xs font-medium text-primary">LEAD</div>
             <div className="mt-1 font-medium">
@@ -110,7 +84,7 @@ export function TeamStructure({
             <>
               <div className="flex flex-col items-center py-2 text-xs text-muted-foreground">
                 <ArrowDown className="h-5 w-5" />
-                <span>Delegate · receive results</span>
+                <span>委派 · 回传结果</span>
               </div>
               <div
                 className={`grid gap-2 ${compact ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}
@@ -123,7 +97,7 @@ export function TeamStructure({
                     <button
                       key={item.id}
                       onClick={() => setSelected(item.agentId)}
-                      className={`rounded-lg border border-border bg-white p-3 text-left shadow-sm ${selected === item.agentId ? "border-primary" : ""}`}
+                      className={`rounded-lg border border-border bg-surface p-3 text-left shadow-sm ${selected === item.agentId ? "border-primary" : ""}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-medium text-muted-foreground">
@@ -193,9 +167,9 @@ export function TeamOrchestration({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 rounded-lg bg-muted p-1">
           {[
-            ["roles", "Roles & members"],
-            ["rules", "Coordination rules"],
-            ["limits", "Execution limits"],
+            ["roles", "角色与成员"],
+            ["rules", "协作规则"],
+            ["limits", "执行限额"],
           ].map(([key, label]) => (
             <Button
               key={key}
@@ -210,7 +184,7 @@ export function TeamOrchestration({
         </div>
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <GitBranch className="h-3 w-3" />
-          Changes apply to new collaborations.
+          修改仅对新协作生效。
         </p>
       </div>
       {section === "roles" && (
@@ -225,7 +199,7 @@ export function TeamOrchestration({
             />
             <div>
               <h3 className="mb-3 font-semibold">
-                Workers · {team.members?.length || 0}
+                成员 · {team.members?.length || 0}
               </h3>
               <MembersEditor
                 teamId={team.id}
@@ -267,7 +241,7 @@ function LeaderEditor({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Lead Agent</CardTitle>
+        <CardTitle>主管智能体</CardTitle>
         <CardDescription>
           The entry point for new requests and owner of the final response.
         </CardDescription>
@@ -286,7 +260,7 @@ function LeaderEditor({
             disabled={!canEdit}
             excludeIds={(team.members || []).map((member) => member.agentId)}
             required
-            aria-label="Team lead Agent"
+            aria-label="团队主管智能体"
           />
           {canEdit && (
             <Button
@@ -294,7 +268,7 @@ function LeaderEditor({
               size="sm"
               disabled={save.isPending || leader === team.leaderAgentId}
             >
-              Save Lead
+              保存主管
             </Button>
           )}
           {save.error && (
@@ -330,10 +304,10 @@ function RulesEditor({
     <Card>
       <CardHeader>
         <CardTitle>
-          {section === "limits" ? "Execution limits" : "Coordination rules"}
+          {section === "limits" ? "执行限额" : "协作规则"}
         </CardTitle>
         <CardDescription>
-          Existing collaborations continue with their saved Team configuration.
+          既有协作继续使用其已保存的团队配置。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -347,30 +321,30 @@ function RulesEditor({
           <fieldset disabled={!canEdit || save.isPending} className="space-y-5">
             <div className={section === "rules" ? "space-y-5" : "hidden"}>
               <label className="block text-sm font-medium">
-                Team instructions
+                团队协作指令
                 <Textarea
                   className="mt-2 min-h-60"
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
-                  placeholder="Explain how the Lead assigns work, accepts results, handles failures and submits the final response."
+                  placeholder="说明主管如何分配工作、验收结果、处理失败并提交最终答复。"
                 />
               </label>
               <div className="grid gap-4">
                 {[
                   [
                     "allowExternalDelegation",
-                    "Allow delegation outside this Team",
-                    "The Lead can involve Agents or Teams outside the configured roster.",
+                    "允许向团队外委派",
+                    "主管可以调用名单之外的智能体或团队。",
                   ],
                   [
                     "allowMentionAll",
-                    "Allow delegation to all members",
-                    "Allow a request to address the entire roster.",
+                    "允许委派给全部成员",
+                    "允许一次请求面向整个名单派发。",
                   ],
                   [
                     "requireReview",
-                    "Require human review",
-                    "Require review according to the execution policy.",
+                    "需要人工审核",
+                    "按执行策略要求审核。",
                   ],
                 ].map(([field, label, help]) => (
                   <label
@@ -395,42 +369,56 @@ function RulesEditor({
                 ))}
               </div>
             </div>
-            <div
-              className={
-                section === "limits"
-                  ? "grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-                  : "hidden"
-              }
-            >
-              {limits.map(([field, label, help, max]) => (
-                <label key={field} className="text-sm font-medium">
-                  {label}
-                  <Input
-                    className="mt-2"
-                    type="number"
-                    min={0}
-                    max={max}
-                    step={1}
-                    required
-                    value={String(policy[field] ?? 0)}
-                    onChange={(e) =>
-                      setPolicy((p) => ({
-                        ...p,
-                        [field]:
-                          e.target.value === "" ? "" : Number(e.target.value),
-                      }))
-                    }
-                  />
-                  <span className="mt-2 block text-xs font-normal text-muted-foreground">
-                    {help}
-                  </span>
-                </label>
-              ))}
+            <div className={section === "limits" ? "space-y-4" : "hidden"}>
+              <div className="rounded-xl border border-border bg-surface-2 p-4">
+                <div className="text-xs font-semibold tracking-wide text-text-3 uppercase">
+                  配置摘要
+                </div>
+                <p className="mt-1.5 text-sm text-text-2">
+                  {limitSummary(policy) ?? "全部限额使用平台默认值，未做团队级定制。"}
+                </p>
+              </div>
+              <details className="rounded-xl border border-border">
+                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-text hover:bg-hover">
+                  高级限额（6 项）
+                  {isLimitDefault(policy) ? (
+                    <span className="ml-2 text-xs font-normal text-text-3">全部默认，通常无需展开</span>
+                  ) : (
+                    <span className="ml-2 text-xs font-normal text-primary">已定制</span>
+                  )}
+                </summary>
+                <div className="grid gap-5 border-t border-border p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {limits.map(([field, label, help, max]) => (
+                    <label key={field} className="text-sm font-medium">
+                      {label}
+                      <Input
+                        className="mt-2"
+                        type="number"
+                        min={0}
+                        max={max}
+                        step={1}
+                        required
+                        value={String(policy[field] ?? 0)}
+                        onChange={(e) =>
+                          setPolicy((p) => ({
+                            ...p,
+                            [field]:
+                              e.target.value === "" ? "" : Number(e.target.value),
+                          }))
+                        }
+                      />
+                      <span className="mt-2 block text-xs font-normal text-muted-foreground">
+                        {help}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </details>
             </div>
           </fieldset>
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
-              Save collaboration rules & limits
+              保存协作规则与限额
             </Button>
           )}
           {save.error && (

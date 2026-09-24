@@ -64,7 +64,7 @@ export function TeamTaskMap({
     (step) => step.parentId && positions.has(step.parentId),
   );
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-slate-50">
+    <div className="min-w-0 rounded-xl border border-border bg-surface-2">
       <div className="flex items-center justify-between gap-3 border-b border-border p-3 text-xs text-muted-foreground">
         <span>
           {steps.length} work steps · {linked.length} visible task links
@@ -93,7 +93,7 @@ export function TeamTaskMap({
                 refY="4"
                 orient="auto"
               >
-                <path d="M0,0 L8,4 L0,8" fill="#94a3b8" />
+                <path d="M0,0 L8,4 L0,8" fill="currentColor" className="text-text-3" />
               </marker>
             </defs>
             {linked.map((step) => {
@@ -108,7 +108,7 @@ export function TeamTaskMap({
                   key={step.id}
                   d={`M ${startX} ${startY} C ${startX + 30} ${startY}, ${endX - 30} ${endY}, ${endX} ${endY}`}
                   fill="none"
-                  stroke="#94a3b8"
+                  stroke="currentColor"
                   strokeWidth="1.5"
                   markerEnd={`url(#${marker})`}
                 />
@@ -123,7 +123,7 @@ export function TeamTaskMap({
                 onClick={() => onSelect(step.id)}
                 aria-pressed={selected === step.id}
                 style={{ left: pos.x, top: pos.y, width: 230, height: 144 }}
-                className={`absolute flex flex-col rounded-lg border border-border bg-white p-3 text-left shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected === step.id ? "border-primary ring-1 ring-primary" : "hover:border-slate-400"}`}
+                className={`absolute flex flex-col rounded-lg border border-border bg-surface p-3 text-left shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected === step.id ? "border-primary ring-1 ring-primary" : "hover:border-border-strong"}`}
               >
                 <span className="flex w-full items-center justify-between gap-1">
                   <span className="truncate text-xs font-medium text-muted-foreground">
