@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-/*
- * Copyright 2024-2026 the original author or authors.
- * Licensed under the Apache License, Version 2.0.
- */
-
-import { ArrowLeft, Bot, Cpu, FolderKanban, Sparkles, Wrench } from 'lucide-react';
+import { Bot, Cpu, FolderKanban, Sparkles, Wrench } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,91 +27,62 @@ import {
 import { listEnvironments } from '../api/environments';
 import { getWorkspace, listWorkspaces, WorkspaceSummary } from '../api/workspaces';
 import { useControlPlaneScope } from '../app/ScopeContext';
-
-const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100%', background: '#fbfbfc', color: '#18181b', paddingBottom: 96 },
-  header: {
-    position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', gap: 20, padding: '18px 28px', background: 'rgba(251,251,252,.94)',
-    backdropFilter: 'blur(12px)', borderBottom: '1px solid #e4e4e7',
-  },
-  headerMain: { display: 'flex', gap: 14, alignItems: 'center' },
-  back: { border: 0, background: 'transparent', padding: 6, cursor: 'pointer', color: '#3f3f46' },
-  title: { margin: 0, fontSize: 22, lineHeight: 1.2, fontWeight: 650, letterSpacing: '-.02em' },
-  subtitle: { margin: '3px 0 0', color: '#71717a', fontSize: 14 },
-  headerPill: { borderRadius: 999, padding: '7px 12px', background: '#f4f4f5', color: '#52525b', fontSize: 13 },
-  content: { width: 'min(920px, calc(100% - 48px))', margin: '0 auto', padding: '38px 0' },
-  section: { marginBottom: 38 },
-  sectionTitle: { display: 'flex', alignItems: 'center', gap: 9, margin: 0, fontSize: 17, fontWeight: 650 },
-  sectionHint: { margin: '7px 0 15px', color: '#71717a', fontSize: 14, lineHeight: 1.5 },
-  card: { border: '1px solid #e4e4e7', background: '#fff', borderRadius: 16, overflow: 'hidden' },
-  row: {
-    display: 'grid', gridTemplateColumns: '210px minmax(0, 1fr)', gap: 24,
-    padding: '22px 24px', borderBottom: '1px solid #eeeeef', alignItems: 'start',
-  },
-  lastRow: { borderBottom: 0 },
-  label: { paddingTop: 10, fontSize: 14, fontWeight: 600, color: '#27272a' },
-  input: {
-    width: '100%', boxSizing: 'border-box', border: '1px solid #d4d4d8', borderRadius: 10,
-    background: '#fff', padding: '11px 13px', fontSize: 15, color: '#18181b', outline: 'none',
-  },
-  textarea: {
-    width: '100%', boxSizing: 'border-box', minHeight: 190, resize: 'vertical',
-    border: '1px solid #d4d4d8', borderRadius: 10, background: '#fff', padding: '13px 14px',
-    fontSize: 14, lineHeight: 1.6, color: '#18181b', outline: 'none', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  },
-  hint: { marginTop: 7, color: '#71717a', fontSize: 12.5, lineHeight: 1.5 },
-  capabilityList: { display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 },
-  capability: { border: '1px solid #e4e4e7', background: '#fafafa', borderRadius: 999, padding: '5px 9px', fontSize: 12, color: '#52525b' },
-  preview: { marginTop: 11, padding: '12px 13px', borderRadius: 10, background: '#fafafa', border: '1px solid #eeeeef', fontSize: 13, color: '#52525b', lineHeight: 1.55 },
-  details: { border: '1px solid #e4e4e7', background: '#fff', borderRadius: 14, padding: '4px 20px' },
-  summary: { cursor: 'pointer', padding: '15px 0', fontWeight: 600, fontSize: 14 },
-  footer: {
-    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 12, display: 'flex', justifyContent: 'flex-end',
-    gap: 10, padding: '14px 28px', background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(12px)', borderTop: '1px solid #e4e4e7',
-  },
-  primary: { border: 0, borderRadius: 10, background: '#18181b', color: '#fff', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' },
-  disabled: { background: '#d4d4d8', cursor: 'not-allowed' },
-  secondary: { border: '1px solid #d4d4d8', borderRadius: 10, background: '#fff', color: '#3f3f46', padding: '10px 16px', fontWeight: 600, cursor: 'pointer' },
-  error: { alignSelf: 'center', marginRight: 'auto', color: '#b91c1c', fontSize: 13 },
-};
+import { BackButton } from '../components/ui/back-button';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Input, Select, Textarea } from '../components/ui/input';
+import { Page } from '../components/Page';
+import { cn } from '../lib/utils';
 
 const managedRuntime: DiscoveredRuntimeOption = {
-  id: 'managed', name: 'AgentScope Managed', provider: 'agentscope', runtimeProfileId: '', runtimePoolId: '', hostCount: 1,
+  id: 'managed', name: 'AgentScope 托管', provider: 'agentscope', runtimeProfileId: '', runtimePoolId: '', hostCount: 1,
   capabilities: {
-    displayName: 'AgentScope Managed', instructions: { supported: true, mode: 'native' },
+    displayName: 'AgentScope 托管', instructions: { supported: true, mode: 'native' },
     workspace: { supported: true, mode: 'native' }, skills: { supported: true, mode: 'native' },
     tools: { supported: true, mode: 'native' }, mcp: { supported: true, mode: 'native' },
     model: { supported: true, mode: 'registry' }, resume: true,
   },
 };
 
-function capabilityLabels(capabilities?: RuntimeCapabilityDescriptor): string[] {
+const CAPABILITY_LABEL: Record<string, string> = {
+  workspace: '工作空间',
+  skills: '技能',
+  tools: '工具',
+  mcp: 'MCP',
+  resume: '可恢复',
+};
+
+function capabilityKeys(capabilities?: RuntimeCapabilityDescriptor): string[] {
   if (!capabilities) return [];
-  const labels: string[] = [];
-  if (capabilities.workspace?.supported) labels.push('Workspace');
-  if (capabilities.skills?.supported) labels.push('Skills');
-  if (capabilities.tools?.supported) labels.push('Tools');
-  if (capabilities.mcp?.supported) labels.push('MCP');
-  if (capabilities.resume) labels.push('Resume');
-  return labels;
+  const keys: string[] = [];
+  if (capabilities.workspace?.supported) keys.push('workspace');
+  if (capabilities.skills?.supported) keys.push('skills');
+  if (capabilities.tools?.supported) keys.push('tools');
+  if (capabilities.mcp?.supported) keys.push('mcp');
+  if (capabilities.resume) keys.push('resume');
+  return keys;
 }
 
 function capabilityDetails(capabilities?: RuntimeCapabilityDescriptor): string {
   if (!capabilities) return '';
   const describe = (label: string, capability?: { supported: boolean; mode?: string; target?: string }) => {
-    if (!capability?.supported) return `${label}: unavailable`;
+    if (!capability?.supported) return `${label}：不可用`;
     if (capability.target) return `${label} → ${capability.target}`;
-    return `${label}: ${(capability.mode || 'native').replace(/-/g, ' ')}`;
+    return `${label}：${(capability.mode || 'native').replace(/-/g, ' ')}`;
   };
   return [
-    describe('Instructions', capabilities.instructions),
-    describe('Skills', capabilities.skills),
-    describe('Tools', capabilities.tools),
+    describe('指令', capabilities.instructions),
+    describe('技能', capabilities.skills),
+    describe('工具', capabilities.tools),
     describe('MCP', capabilities.mcp),
-    `Session resume: ${capabilities.resume ? 'supported' : 'one-shot'}`,
+    `会话恢复：${capabilities.resume ? '支持' : '一次性'}`,
   ].join(' · ');
 }
+
+const rowClass = 'grid grid-cols-1 gap-4 border-b border-border py-5 last:border-b-0 sm:grid-cols-[210px_minmax(0,1fr)] sm:gap-6 sm:px-6';
+const labelClass = 'pt-0 text-sm font-semibold text-text-2 sm:pt-2.5';
+const hintClass = 'mt-1.5 text-[13px] leading-5 text-text-3';
 
 export default function AgentCreatePage() {
   const navigate = useNavigate();
@@ -163,7 +129,7 @@ export default function AgentCreatePage() {
     [executionId, runtimes],
   );
   const runtimeKind = executionId === 'managed' ? 'managed' : 'hosted-runtime';
-  const labels = capabilityLabels(execution?.capabilities);
+  const capKeys = capabilityKeys(execution?.capabilities);
   const capabilityDetail = capabilityDetails(execution?.capabilities);
   const canSubmit = !submitting && !!name.trim() && !!agentKey.trim() && !!execution;
 
@@ -185,118 +151,193 @@ export default function AgentCreatePage() {
       const created = await createAgent(req);
       navigate(scope.scopedPath(`/agent-center/agents/${encodeURIComponent(created.id)}`), { replace: true });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to create');
+      setErr(e instanceof Error ? e.message : '创建失败，请重试');
     } finally { setSubmitting(false); }
   }
 
   return (
-    <div className="console-page-legacy" style={S.page}>
-      <header style={S.header}>
-        <div style={S.headerMain}>
-          <button type="button" aria-label="Back to previous page" title="Back to previous page" style={S.back} onClick={() => navigate(-1)}><ArrowLeft size={20} /></button>
-          <div><h1 style={S.title}>Create an agent</h1><p style={S.subtitle}>Review and configure</p></div>
+    <Page className="max-w-4xl pb-28">
+      <header className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-5 border-b border-border bg-canvas/95 px-5 py-4 backdrop-blur sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10">
+        <div className="flex items-center gap-3.5">
+          <BackButton label="返回" onClick={() => navigate(-1)} />
+          <div>
+            <h1 className="m-0 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text">创建智能体</h1>
+            <p className="mt-0.5 text-sm text-text-3">确认并完成配置</p>
+          </div>
         </div>
-        <span style={S.headerPill}>{execution?.name ?? 'Detecting runtime…'}</span>
+        <Badge tone="neutral">{execution?.name ?? '正在探测运行时…'}</Badge>
       </header>
 
-      <div style={S.content}>
-        <section style={S.section}>
-          <h2 style={S.sectionTitle}><Bot size={19} /> Identity</h2>
-          <p style={S.sectionHint}>Give the agent a recognizable name and a concise purpose.</p>
-          <div style={S.card}>
-            <div style={S.row}>
-              <label htmlFor="agent-name" style={S.label}>Name</label>
-              <input id="agent-name" style={S.input} value={name} onChange={e => {
-                setName(e.target.value);
-                if (!agentKeyCustomized) setAgentKey(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, ''));
-              }} placeholder="e.g. Repository reviewer" autoFocus />
+      <div className="mx-auto w-full max-w-[920px] space-y-9 py-9">
+        <section aria-labelledby="create-agent-identity">
+          <h2 id="create-agent-identity" className="m-0 flex items-center gap-2 text-[17px] font-semibold text-text">
+            <Bot size={19} aria-hidden="true" /> 身份
+          </h2>
+          <p className="mt-1.5 mb-4 text-sm leading-6 text-text-3">
+            为智能体取一个可识别的名字，并用一句话说明它的用途。
+          </p>
+          <Card>
+            <div className={rowClass}>
+              <label htmlFor="agent-name" className={labelClass}>名称</label>
+              <Input
+                id="agent-name"
+                value={name}
+                onChange={e => {
+                  setName(e.target.value);
+                  if (!agentKeyCustomized) setAgentKey(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, ''));
+                }}
+                placeholder="例如：代码仓库评审员"
+                autoFocus
+              />
             </div>
-            <div style={{ ...S.row, ...S.lastRow }}>
-              <label htmlFor="agent-description" style={S.label}>Description</label>
+            <div className={rowClass}>
+              <label htmlFor="agent-description" className={labelClass}>描述</label>
               <div>
-                <textarea id="agent-description" style={{ ...S.textarea, minHeight: 90, fontFamily: 'inherit' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What does this agent do?" maxLength={255} />
-                <div style={{ ...S.hint, textAlign: 'right' }}>{description.length} / 255</div>
+                <Textarea
+                  id="agent-description"
+                  className="min-h-[90px]"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="这个智能体负责做什么？"
+                  maxLength={255}
+                />
+                <div className="mt-1 text-right text-[12.5px] text-text-4">{description.length} / 255</div>
               </div>
             </div>
-          </div>
+          </Card>
         </section>
 
-        <section style={S.section}>
-          <h2 style={S.sectionTitle}><Sparkles size={19} /> Behavior &amp; capabilities</h2>
-          <p style={S.sectionHint}>Define how it should work and attach workspace capabilities it can rely on.</p>
-          <div style={S.card}>
-            <div style={S.row}>
-              <label htmlFor="agent-instructions" style={S.label}>Instructions</label>
+        <section aria-labelledby="create-agent-behavior">
+          <h2 id="create-agent-behavior" className="m-0 flex items-center gap-2 text-[17px] font-semibold text-text">
+            <Sparkles size={19} aria-hidden="true" /> 行为与能力
+          </h2>
+          <p className="mt-1.5 mb-4 text-sm leading-6 text-text-3">
+            定义它的工作方式，并挂载可依赖的工作空间能力。
+          </p>
+          <Card>
+            <div className={rowClass}>
+              <label htmlFor="agent-instructions" className={labelClass}>指令</label>
               <div>
-                <textarea id="agent-instructions" style={S.textarea} value={sysPrompt} onChange={e => setSysPrompt(e.target.value)} placeholder="Write what this agent should do, what to focus on, and what to avoid…" />
-                <div style={S.hint}>The selected runtime adapter maps these instructions to its native prompt or configuration.</div>
+                <Textarea
+                  id="agent-instructions"
+                  value={sysPrompt}
+                  onChange={e => setSysPrompt(e.target.value)}
+                  placeholder="写下这个智能体应该做什么、关注什么、避免什么…"
+                />
+                <p className={hintClass}>所选运行时适配器会把这些指令映射为其原生提示词或配置。</p>
               </div>
             </div>
-            <div style={{ ...S.row, ...S.lastRow }}>
-              <label htmlFor="agent-workspace" style={S.label}>Workspace</label>
+            <div className={rowClass}>
+              <label htmlFor="agent-workspace" className={labelClass}>工作空间</label>
               <div>
-                <select id="agent-workspace" style={S.input} value={workspaceId} onChange={e => setWorkspaceId(e.target.value)}>
-                  <option value="">No linked workspace</option>
+                <Select id="agent-workspace" value={workspaceId} onChange={e => setWorkspaceId(e.target.value)}>
+                  <option value="">不关联工作空间</option>
                   {workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
-                </select>
-                <div style={S.hint}>A workspace is the portable source for repository guidance, skills, tools, and subagents.</div>
-                {preview && <div style={S.preview}><strong>{preview.name}</strong> · {preview.agentsMdExists ? 'AGENTS.md · ' : ''}{preview.skillCount ?? 0} skills · {preview.subagentCount ?? 0} subagents</div>}
+                </Select>
+                <p className={hintClass}>工作空间是仓库规范、技能、工具与子智能体的可移植来源。</p>
+                {preview && (
+                  <div className="mt-2.5 rounded-[10px] border border-border bg-surface-2 px-3.5 py-3 text-[13px] leading-6 text-text-3">
+                    <strong className="text-text-2">{preview.name}</strong> · {preview.agentsMdExists ? 'AGENTS.md · ' : ''}{preview.skillCount ?? 0} 技能 · {preview.subagentCount ?? 0} 子智能体
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          </Card>
         </section>
 
-        <section style={S.section}>
-          <h2 style={S.sectionTitle}><Cpu size={19} /> Execution</h2>
-          <p style={S.sectionHint}>Choose where the agent runs. Hosts, pools, profiles, and CLI commands are resolved behind this selection.</p>
-          <div style={S.card}>
-            <div style={S.row}>
-              <label htmlFor="agent-runtime" style={S.label}>Runtime</label>
+        <section aria-labelledby="create-agent-execution">
+          <h2 id="create-agent-execution" className="m-0 flex items-center gap-2 text-[17px] font-semibold text-text">
+            <Cpu size={19} aria-hidden="true" /> 执行
+          </h2>
+          <p className="mt-1.5 mb-4 text-sm leading-6 text-text-3">
+            选择智能体的运行位置。主机、资源池、 profile 与 CLI 命令都在此选择背后完成解析。
+          </p>
+          <Card>
+            <div className={rowClass}>
+              <label htmlFor="agent-runtime" className={labelClass}>运行时</label>
               <div>
-                <select id="agent-runtime" style={S.input} value={executionId} onChange={e => { setExecutionCustomized(true); setExecutionId(e.target.value); }}>
+                <Select id="agent-runtime" value={executionId} onChange={e => { setExecutionCustomized(true); setExecutionId(e.target.value); }}>
                   {runtimes.map(runtime => <option key={runtime.id} value={runtime.id}>{runtime.name}</option>)}
                   <option value="managed">{managedRuntime.name}</option>
-                </select>
-                {runtimes.length === 0 && <div style={S.hint}>No local agent runtime is online, so AgentScope Managed is selected.</div>}
-                {labels.length > 0 && <div style={S.capabilityList}>{labels.map(label => <span key={label} style={S.capability}>{label}</span>)}</div>}
-                {capabilityDetail && <div style={S.hint}>{capabilityDetail}</div>}
+                </Select>
+                {runtimes.length === 0 && (
+                  <p className={hintClass}>当前没有本地智能体运行时在线，已选择 AgentScope 托管。</p>
+                )}
+                {capKeys.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {capKeys.map(key => (
+                      <Badge key={key} tone="neutral">{CAPABILITY_LABEL[key] ?? key}</Badge>
+                    ))}
+                  </div>
+                )}
+                {capabilityDetail && <p className={hintClass}>{capabilityDetail}</p>}
               </div>
             </div>
-            <div style={{ ...S.row, ...S.lastRow }}>
-              <label htmlFor="agent-model" style={S.label}>Model</label>
+            <div className={rowClass}>
+              <label htmlFor="agent-model" className={labelClass}>模型</label>
               <div>
-                <input id="agent-model" style={S.input} value={model} onChange={e => setModel(e.target.value)} placeholder="Default (provider)" />
-                <div style={S.hint}>Optional override. Leave blank to use the runtime provider's default model.</div>
+                <Input
+                  id="agent-model"
+                  value={model}
+                  onChange={e => setModel(e.target.value)}
+                  placeholder="默认（跟随提供方）"
+                />
+                <p className={hintClass}>可选覆盖。留空则使用运行时提供方的默认模型。</p>
               </div>
             </div>
-          </div>
+          </Card>
         </section>
 
-        <details style={S.details}>
-          <summary style={S.summary}>Advanced settings</summary>
-          <div style={{ ...S.row, paddingLeft: 0, paddingRight: 0 }}>
-            <label htmlFor="agent-key" style={S.label}>Agent key</label>
-            <div><input id="agent-key" style={S.input} value={agentKey} onChange={e => { setAgentKeyCustomized(true); setAgentKey(e.target.value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-')); }} placeholder="repository-reviewer" /><div style={S.hint}>{scope.selectorVisible ? 'Stable identity inside the current tenant and namespace.' : 'Stable identity for this agent.'}</div></div>
+        <details className="rounded-[14px] border border-border bg-surface px-5">
+          <summary className="cursor-pointer py-3.5 text-sm font-semibold text-text-2">高级设置</summary>
+          <div className={cn(rowClass, 'px-0')}>
+            <label htmlFor="agent-key" className={labelClass}>智能体标识</label>
+            <div>
+              <Input
+                id="agent-key"
+                value={agentKey}
+                onChange={e => { setAgentKeyCustomized(true); setAgentKey(e.target.value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-')); }}
+                placeholder="repository-reviewer"
+              />
+              <p className={hintClass}>{scope.selectorVisible ? '当前租户与命名空间内的稳定标识。' : '该智能体的稳定标识。'}</p>
+            </div>
           </div>
-          {runtimeKind === 'managed' && <div style={{ ...S.row, paddingLeft: 0, paddingRight: 0 }}>
-            <label htmlFor="agent-environment" style={S.label}><FolderKanban size={16} /> Environment</label>
-            <select id="agent-environment" style={S.input} value={defaultEnvironmentId} onChange={e => setDefaultEnvironmentId(e.target.value)}>
-              <option value="">Automatic local default</option>
-              {environments.map(environment => <option key={environment.id} value={environment.id}>{environment.name} ({environment.type})</option>)}
-            </select>
-          </div>}
-          {runtimeKind === 'managed' && <div style={{ ...S.row, ...S.lastRow, paddingLeft: 0, paddingRight: 0 }}>
-            <label htmlFor="agent-workspace-path" style={S.label}><Wrench size={16} /> Workspace path</label>
-            <input id="agent-workspace-path" style={S.input} value={workspacePath} onChange={e => setWorkspacePath(e.target.value)} placeholder="Automatic" />
-          </div>}
+          {runtimeKind === 'managed' && (
+            <div className={cn(rowClass, 'px-0')}>
+              <label htmlFor="agent-environment" className={labelClass}>
+                <span className="inline-flex items-center gap-1.5"><FolderKanban size={16} aria-hidden="true" /> 运行环境</span>
+              </label>
+              <Select id="agent-environment" value={defaultEnvironmentId} onChange={e => setDefaultEnvironmentId(e.target.value)}>
+                <option value="">自动使用本地默认</option>
+                {environments.map(environment => <option key={environment.id} value={environment.id}>{environment.name}（{environment.type}）</option>)}
+              </Select>
+            </div>
+          )}
+          {runtimeKind === 'managed' && (
+            <div className={cn(rowClass, 'px-0')}>
+              <label htmlFor="agent-workspace-path" className={labelClass}>
+                <span className="inline-flex items-center gap-1.5"><Wrench size={16} aria-hidden="true" /> 工作空间路径</span>
+              </label>
+              <Input
+                id="agent-workspace-path"
+                value={workspacePath}
+                onChange={e => setWorkspacePath(e.target.value)}
+                placeholder="自动"
+              />
+            </div>
+          )}
         </details>
       </div>
 
-      <footer style={S.footer}>
-        {err && <span style={S.error}>{err}</span>}
-        <button style={S.secondary} onClick={() => navigate(scope.scopedPath('/agent-center/agents'))}>Cancel</button>
-        <button style={{ ...S.primary, ...(canSubmit ? {} : S.disabled) }} onClick={handleSubmit} disabled={!canSubmit}>{submitting ? 'Creating…' : 'Create & open agent'}</button>
+      <footer className="fixed inset-x-0 bottom-0 z-20 -mx-5 flex flex-wrap items-center justify-end gap-2.5 border-t border-border bg-canvas/95 px-5 py-3.5 backdrop-blur sm:-mx-8 sm:px-8 lg:-mx-10 lg:px-10">
+        {err && (
+          <span role="alert" className="mr-auto text-[13px] text-danger-text">{err}</span>
+        )}
+        <Button variant="outline" onClick={() => navigate(scope.scopedPath('/agent-center/agents'))}>取消</Button>
+        <Button onClick={handleSubmit} disabled={!canSubmit}>
+          {submitting ? '创建中…' : '创建并打开智能体'}
+        </Button>
       </footer>
-    </div>
+    </Page>
   );
 }

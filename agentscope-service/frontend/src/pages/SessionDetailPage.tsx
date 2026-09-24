@@ -24,51 +24,12 @@ import {
 } from '../api/managedSessions';
 import ChatPanel from '../components/ChatPanel';
 import SessionTranscript from '../components/SessionTranscript';
+import { BackButton } from '../components/ui/back-button';
+import { Badge } from '../components/ui/badge';
+import { Tabs } from '../components/ui/tabs';
+import { cn } from '../lib/utils';
 
 type Tab = 'chat' | 'details';
-
-const S: Record<string, React.CSSProperties> = {
-  root: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
-  bar: {
-    display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-    padding: '14px 28px 0', borderBottom: '1px solid #e2e8f0', background: '#ffffff', flexShrink: 0,
-  },
-  back: {
-    color: '#6366f1', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 500,
-  },
-  title: { fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: 0 },
-  meta: {
-    fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'ui-monospace, Menlo, monospace',
-  },
-  teamTag: {
-    fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600,
-    padding: '2px 8px', borderRadius: 6, color: '#0f766e', background: '#ccfbf1',
-  },
-  tabs: { display: 'flex', gap: 4, marginLeft: 8 },
-  tab: {
-    background: 'transparent', border: 'none', borderBottom: '2px solid transparent',
-    padding: '12px 16px', cursor: 'pointer', fontSize: '0.9rem', color: '#64748b', fontWeight: 500,
-    marginBottom: -1,
-  },
-  tabActive: { color: '#0f172a', fontWeight: 600, borderBottomColor: '#6366f1' },
-  body: { flex: 1, minHeight: 0, overflow: 'auto' },
-  bodyChat: { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
-  banner: {
-    flexShrink: 0,
-    margin: '12px 28px 0',
-    padding: '12px 14px',
-    borderRadius: 10,
-    border: '1px solid #99f6e4',
-    background: '#f0fdfa',
-    color: '#115e59',
-    fontSize: '0.88rem',
-    lineHeight: 1.5,
-  },
-  bannerLink: { color: '#0f766e', fontWeight: 600 },
-  chatWrap: { flex: 1, minHeight: 0 },
-  err: { padding: 32, color: '#dc2626' },
-  loading: { padding: 32, color: '#94a3b8' },
-};
 
 export default function SessionDetailPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>();
@@ -90,7 +51,7 @@ export default function SessionDetailPage() {
       .catch(e => {
         if (!cancelled) {
           setSession(null);
-          setErr(e instanceof Error ? e.message : 'Failed to load session');
+          setErr(e instanceof Error ? e.message : '会话加载失败');
         }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -105,20 +66,24 @@ export default function SessionDetailPage() {
   }
 
   if (!sessionId) {
-    return <div style={S.err}>Missing session id. <Link to="/managed/sessions">Back to conversations</Link></div>;
+    return (
+      <div className="p-8 text-sm text-danger-text">
+        缺少会话 ID。<Link className="underline" to="/managed/sessions">返回会话列表</Link>
+      </div>
+    );
   }
 
   if (loading) {
-    return <div style={S.loading}>Loading session…</div>;
+    return <div className="p-8 text-sm text-text-4">会话加载中…</div>;
   }
 
   if (err || !session) {
     return (
-      <div style={S.err}>
-        {err || 'Session not found.'}{' '}
-        <Link to="/managed/sessions">Back to conversations</Link>
+      <div className="p-8 text-sm text-danger-text">
+        {err || '未找到该会话。'}{' '}
+        <Link className="underline" to="/managed/sessions">返回会话列表</Link>
         {' · '}
-        <Link to="/managed/sessions/new">Create conversation</Link>
+        <Link className="underline" to="/managed/sessions/new">新建会话</Link>
       </div>
     );
   }
@@ -127,54 +92,50 @@ export default function SessionDetailPage() {
   const fromTask = !!taskRef;
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <div style={S.bar}>
-        <button
-          type="button"
-          aria-label="Back to previous page"
-          title="Back to previous page"
-          onClick={() => navigate(-1)}
-          style={{ ...S.back, border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-3.5 border-b border-border bg-surface px-5 pt-3.5 sm:px-7">
+        <BackButton label="返回" onClick={() => navigate(-1)} />
+        <h1 className="m-0 text-[17px] font-bold text-text">会话</h1>
+        <span
+          className="font-mono text-[12.5px] text-text-4"
+          title={session.id}
         >
-          ← Back
-        </button>
-        <h1 style={S.title}>Session</h1>
-        <span style={S.meta} title={session.id}>{session.id}</span>
+          {session.id}
+        </span>
         {fromTask && (
-          <span style={S.teamTag} title={session.externalKey || undefined}>AgentTask</span>
+          <Badge tone="success" title={session.externalKey || undefined}>
+            AgentTask
+          </Badge>
         )}
-        <span style={{ flex: 1 }} />
-        <div style={S.tabs}>
-          <button
-            type="button"
-            style={{ ...S.tab, ...(tab === 'chat' ? S.tabActive : {}) }}
-            onClick={() => setTab('chat')}
-          >
-            {fromTask ? 'Transcript' : 'Chat'}
-          </button>
-          <button
-            type="button"
-            style={{ ...S.tab, ...(tab === 'details' ? S.tabActive : {}) }}
-            onClick={() => setTab('details')}
-          >
-            Details
-          </button>
-        </div>
+        <span className="flex-1" />
+        <Tabs
+          aria-label="会话视图切换"
+          value={tab}
+          onChange={next => setTab(next as Tab)}
+          items={[
+            { value: 'chat', label: fromTask ? '执行记录' : '聊天' },
+            { value: 'details', label: '详情' },
+          ]}
+        />
       </div>
-      <div style={tab === 'chat' ? S.bodyChat : S.body}>
+      <div
+        className={cn(
+          'min-h-0 flex-1',
+          tab === 'chat' ? 'flex flex-col overflow-hidden' : 'overflow-auto',
+        )}
+      >
         {tab === 'chat' ? (
           <>
             {taskRef && (
-              <div style={S.banner}>
-                This session executes AgentTask <strong>{taskRef.agentTaskId}</strong>. Direct
-                chat here is disabled — continue the durable discussion from the{' '}
-                <Link to={agentTaskDetailPath(taskRef)} style={S.bannerLink}>
-                  AgentTask page
-                </Link>
-                .
+              <div className="mx-5 mt-3 shrink-0 rounded-[10px] border border-success-soft bg-success-soft px-3.5 py-3 text-sm leading-6 text-success-text sm:mx-7">
+                该会话执行 AgentTask <strong>{taskRef.agentTaskId}</strong>。此处不支持直接聊天——请前往{' '}
+                <Link to={agentTaskDetailPath(taskRef)} className="font-semibold text-success-text underline">
+                  AgentTask 详情页
+                </Link>{' '}
+                继续持久化讨论。
               </div>
             )}
-            <div style={S.chatWrap}>
+            <div className="min-h-0 flex-1">
               <ChatPanel
                 sessionId={session.id}
                 agentId={session.agentId}

@@ -16,30 +16,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AgentDefinition, listAgents } from '../api/agents';
+import { listAgents } from '../api/agents';
 import NewManagedSessionForm from '../components/NewManagedSessionForm';
 import { AgentPicker } from '../components/AgentPicker';
-
-const S: Record<string, React.CSSProperties> = {
-  root: { padding: '28px 32px', minWidth: 0, maxWidth: 640 },
-  back: {
-    background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer',
-    fontSize: '0.88rem', fontWeight: 500, padding: 0, marginBottom: 16,
-    textDecoration: 'none', display: 'inline-block',
-  },
-  title: { margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 700, color: '#0f172a' },
-  hint: { fontSize: '0.88rem', color: '#64748b', marginBottom: 20, lineHeight: 1.5 },
-  field: { display: 'block', fontSize: '0.82rem', color: '#64748b', marginBottom: 6, fontWeight: 500 },
-  select: {
-    width: '100%', boxSizing: 'border-box', padding: '10px 12px', marginBottom: 18,
-    border: '1px solid #cbd5e1', borderRadius: 8, fontSize: '0.92rem', background: '#ffffff',
-  },
-  err: { color: '#dc2626', fontSize: '0.9rem', marginBottom: 12 },
-  panel: {
-    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14,
-    padding: '8px 4px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
-  },
-};
+import { BackButton } from '../components/ui/back-button';
+import { Card } from '../components/ui/card';
+import { Page, PageHeader } from '../components/Page';
 
 /**
  * Create a Managed session definition (static bind). Does not post user.message.
@@ -47,7 +29,6 @@ const S: Record<string, React.CSSProperties> = {
 export default function SessionCreatePage() {
   const [searchParams] = useSearchParams();
   const prefAgentId = searchParams.get('agentId') ?? '';
-  const [agents, setAgents] = useState<AgentDefinition[]>([]);
   const [agentId, setAgentId] = useState(prefAgentId);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -57,13 +38,12 @@ export default function SessionCreatePage() {
     listAgents()
       .then(list => {
         if (cancelled) return;
-        setAgents(list);
         if (!prefAgentId && list.length === 1) {
           setAgentId(list[0].id);
         }
       })
       .catch(e => {
-        if (!cancelled) setLoadErr(e instanceof Error ? e.message : 'Failed to load agents');
+        if (!cancelled) setLoadErr(e instanceof Error ? e.message : '智能体列表加载失败');
       });
     return () => { cancelled = true; };
   }, [prefAgentId]);
@@ -73,40 +53,43 @@ export default function SessionCreatePage() {
   }, [prefAgentId]);
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <button type="button" aria-label="Back to previous page" title="Back to previous page" onClick={() => navigate(-1)} style={S.back}>
-        ← Back
-      </button>
-      <h1 style={S.title}>New session</h1>
-      <p style={S.hint}>
-        Creates a session resource bound to an agent and mounts. No turn starts until you send a
-        message in Chat.
-      </p>
-      {loadErr && <div style={S.err}>{loadErr}</div>}
-
-      <label style={S.field}>Agent</label>
-      <div style={{ marginBottom: 18 }}>
-        <AgentPicker value={agentId} onChange={setAgentId} required aria-label="Session Agent" />
-      </div>
-
-      {agentId ? (
-        <div style={S.panel}>
-          <NewManagedSessionForm
-            agentId={agentId}
-            modal={false}
-            onCancel={() => navigate(agentId
-              ? `/managed/sessions?agentId=${encodeURIComponent(agentId)}`
-              : '/managed/sessions')}
-            onCreated={session => {
-              navigate(`/managed/sessions/${encodeURIComponent(session.id)}`, { replace: true });
-            }}
-          />
-        </div>
-      ) : (
-        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
-          Choose an agent to configure environment, vaults, and memory mounts.
-        </div>
+    <Page className="max-w-3xl">
+      <PageHeader
+        title="新建会话"
+        description="创建一个绑定智能体并完成挂载的会话资源。在聊天中发送消息之前不会开启任何一轮对话。"
+        actions={<BackButton label="返回" onClick={() => navigate(-1)} />}
+      />
+      {loadErr && (
+        <p role="alert" className="rounded-lg bg-danger-soft px-4 py-2 text-sm text-danger-text">
+          {loadErr}
+        </p>
       )}
-    </div>
+
+      <Card className="p-5">
+        <span className="mb-1.5 block text-sm font-medium text-text-2">智能体</span>
+        <div className="mb-5">
+          <AgentPicker value={agentId} onChange={setAgentId} required aria-label="会话所属智能体" />
+        </div>
+
+        {agentId ? (
+          <div className="rounded-xl border border-border bg-surface p-1">
+            <NewManagedSessionForm
+              agentId={agentId}
+              modal={false}
+              onCancel={() => navigate(agentId
+                ? `/managed/sessions?agentId=${encodeURIComponent(agentId)}`
+                : '/managed/sessions')}
+              onCreated={session => {
+                navigate(`/managed/sessions/${encodeURIComponent(session.id)}`, { replace: true });
+              }}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-text-4">
+            请先选择一个智能体，再配置运行环境、密钥库与记忆库挂载。
+          </p>
+        )}
+      </Card>
+    </Page>
   );
 }

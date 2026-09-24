@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import {
   ManagedSession,
   ManagedSessionListStatus,
@@ -29,94 +30,46 @@ import {
 } from '../api/managedSessions';
 import { AgentDefinition, listAgents } from '../api/agents';
 import { Environment, listEnvironments } from '../api/environments';
+import { Badge, type BadgeTone } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { Tabs } from '../components/ui/tabs';
+import { Page, PageHeader } from '../components/Page';
 
-const S: Record<string, React.CSSProperties> = {
-  root: { padding: '28px 32px', minWidth: 0, maxWidth: 1000 },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' },
-  title: { margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', flex: 1 },
-  tabs: { display: 'flex', gap: 6, marginBottom: 16 },
-  tab: {
-    padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
-    background: '#ffffff', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500,
-  },
-  tabActive: { background: '#eef2ff', color: '#4338ca', borderColor: '#c7d2fe' },
-  filter: {
-    padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1',
-    fontSize: '0.88rem', background: '#ffffff', color: '#334155', minWidth: 200,
-  },
-  primary: {
-    padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: '0.88rem', fontWeight: 600,
-    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%)',
-    color: '#ffffff', border: 'none',
-    boxShadow: '0 2px 6px rgba(99,102,241,0.25)',
-    textDecoration: 'none', display: 'inline-flex', alignItems: 'center',
-  },
-  empty: { padding: '60px 0', color: '#94a3b8', fontSize: '0.95rem', textAlign: 'center' },
-  emptyLink: {
-    color: '#6366f1', fontWeight: 600, textDecoration: 'none', fontSize: '0.95rem',
-  },
-  card: {
-    background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12,
-    padding: '18px 20px', marginBottom: 12,
-    boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
-  },
-  cardHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 },
-  label: { fontSize: '0.98rem', color: '#0f172a', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  time: { fontSize: '0.8rem', color: '#94a3b8', flexShrink: 0 },
-  statusTag: {
-    fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600,
-    padding: '2px 8px', borderRadius: 6, flexShrink: 0,
-  },
-  teamTag: {
-    fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600,
-    padding: '2px 8px', borderRadius: 6, flexShrink: 0,
-    color: '#0f766e', background: '#ccfbf1',
-  },
-  stopReason: {
-    fontSize: '0.78rem', color: '#64748b', marginTop: 4,
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  },
-  mounts: { fontSize: '0.78rem', color: '#64748b', marginTop: 8 },
-  agent: { fontSize: '0.82rem', color: '#4338ca', fontWeight: 500, marginTop: 6 },
-  teamMeta: { fontSize: '0.78rem', color: '#0f766e', marginTop: 6 },
-  cardFooter: {
-    display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
-    fontSize: '0.78rem', color: '#94a3b8', flexWrap: 'wrap',
-  },
-  action: {
-    color: '#6366f1', cursor: 'pointer', fontWeight: 500, background: 'none',
-    border: 'none', padding: 0, fontSize: '0.78rem',
-  },
-  danger: { color: '#dc2626' },
-  err: { color: '#dc2626', fontSize: '0.9rem', marginBottom: 12 },
+const selectClass =
+  'h-10 rounded-lg border border-border bg-surface px-3 text-sm text-text';
+
+const STATUS_LABEL: Record<string, string> = {
+  running: '运行中',
+  idle: '空闲',
+  active: '活跃',
+  requires_action: '待处理',
+  terminated: '已终止',
+  archived: '已归档',
+  rescheduled: '已重排',
 };
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  running: 'info',
+  idle: 'success',
+  active: 'success',
+  requires_action: 'warning',
+  terminated: 'neutral',
+  archived: 'neutral',
+  rescheduled: 'warning',
+};
+
+type SessionAction =
+  | { kind: 'archive'; session: ManagedSession }
+  | { kind: 'delete'; session: ManagedSession };
 
 function relTime(ms: number): string {
   const diff = Date.now() - ms;
-  if (diff < 60_000) return 'just now';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`;
-  return `${Math.floor(diff / 86_400_000)}d`;
-}
-
-function statusStyle(status: string): React.CSSProperties {
-  const base = { ...S.statusTag };
-  switch (status) {
-    case 'running':
-      return { ...base, color: '#0369a1', background: '#e0f2fe' };
-    case 'idle':
-    case 'active':
-      return { ...base, color: '#15803d', background: '#dcfce7' };
-    case 'requires_action':
-      return { ...base, color: '#c2410c', background: '#ffedd5' };
-    case 'terminated':
-    case 'archived':
-      return { ...base, color: '#64748b', background: '#f1f5f9' };
-    case 'rescheduled':
-      return { ...base, color: '#a16207', background: '#fef9c3' };
-    default:
-      return { ...base, color: '#4338ca', background: '#eef2ff' };
-  }
+  if (diff < 60_000) return '刚刚';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
+  return `${Math.floor(diff / 86_400_000)} 天前`;
 }
 
 function stopReasonSummary(stopReason: Record<string, unknown> | null | undefined): string | null {
@@ -135,7 +88,7 @@ function mountSummary(s: ManagedSession, envNameById: Map<string, string>): stri
   const env = envNameById.get(s.environmentId) || s.environmentId || '—';
   const vaults = s.vaultIds?.length ?? 0;
   const mems = s.memoryStoreIds?.length ?? 0;
-  return `env: ${env} · vaults: ${vaults} · memory: ${mems}`;
+  return `运行环境：${env} · 密钥库：${vaults} · 记忆库：${mems}`;
 }
 
 /**
@@ -150,6 +103,7 @@ export default function SessionsHubPage() {
   const [envNameById, setEnvNameById] = useState<Map<string, string>>(new Map());
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<SessionAction>();
   const navigate = useNavigate();
 
   const agentNameById = useMemo(
@@ -173,7 +127,7 @@ export default function SessionsHubPage() {
       setEnvNameById(new Map(envs.map(e => [e.id, e.name])));
       setAgents(agentList);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load sessions');
+      setErr(e instanceof Error ? e.message : '会话列表加载失败');
     }
   }, [agentFilter, tab]);
 
@@ -188,63 +142,73 @@ export default function SessionsHubPage() {
       await action();
       await reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Action failed');
+      setErr(e instanceof Error ? e.message : '操作失败，请重试');
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <div className="console-page-legacy" style={S.root}>
-      <div style={S.header}>
-        <h2 style={S.title}>Sessions</h2>
-        <select
-          style={S.filter}
-          value={agentFilter}
-          onChange={e => {
-            const next = new URLSearchParams(searchParams);
-            if (e.target.value) next.set('agentId', e.target.value);
-            else next.delete('agentId');
-            setSearchParams(next, { replace: true });
-          }}
-        >
-          <option value="">All agents</option>
-          {agents.map(a => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
-        <Link to={newSessionHref} style={S.primary}>New session</Link>
-      </div>
+    <Page className="max-w-5xl">
+      <PageHeader
+        title="会话"
+        description="管理托管会话资源：开启聊天、查看执行记录、归档或删除。"
+        actions={
+          <>
+            <label className="sr-only" htmlFor="session-agent-filter">按智能体筛选</label>
+            <select
+              id="session-agent-filter"
+              className={selectClass}
+              value={agentFilter}
+              onChange={e => {
+                const next = new URLSearchParams(searchParams);
+                if (e.target.value) next.set('agentId', e.target.value);
+                else next.delete('agentId');
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              <option value="">全部智能体</option>
+              {agents.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <Button asChild>
+              <Link to={newSessionHref}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                新建会话
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-      <div style={S.tabs}>
-        {([
-          ['active', 'Active'],
-          ['archived', 'Archived'],
-        ] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            style={{ ...S.tab, ...(tab === key ? S.tabActive : {}) }}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        aria-label="会话状态筛选"
+        value={tab}
+        onChange={value => setTab(value as ManagedSessionListStatus)}
+        items={[
+          { value: 'active', label: '活跃' },
+          { value: 'archived', label: '已归档' },
+        ]}
+      />
 
-      {err && <div style={S.err}>{err}</div>}
+      {err && (
+        <p role="alert" className="rounded-lg bg-danger-soft px-4 py-2 text-sm text-danger-text">
+          {err}
+        </p>
+      )}
 
       {!err && managedEntries.length === 0 && (
-        <div style={S.empty}>
+        <Card className="py-14 text-center text-[15px] text-text-4">
           {tab === 'archived' ? (
-            'No archived sessions.'
+            '暂无已归档的会话。'
           ) : (
             <>
-              No managed sessions yet —{' '}
-              <Link to={newSessionHref} style={S.emptyLink}>create a new session</Link>.
+              还没有托管会话——{' '}
+              <Link to={newSessionHref} className="font-semibold text-primary underline">新建一个会话</Link>。
             </>
           )}
-        </div>
+        </Card>
       )}
 
       {managedEntries.map(s => {
@@ -254,85 +218,122 @@ export default function SessionsHubPage() {
         const taskRef = parseAgentTaskExternalKey(s.externalKey);
         const fromTask = isAgentTaskSession(s);
         return (
-          <div key={s.id} style={S.card}>
-            <div style={S.cardHeader}>
-              <span style={S.label}>{s.id}</span>
-              {fromTask && <span style={S.teamTag} title={s.externalKey || undefined}>AgentTask</span>}
-              <span style={statusStyle(s.status)}>{s.status}</span>
-              <span style={S.time}>{relTime(s.updatedAt)}</span>
+          <Card key={s.id} className="mb-3 p-5">
+            <div className="mb-1.5 flex items-center gap-2.5">
+              <span
+                className="flex-1 truncate text-[15.5px] font-semibold text-text"
+                title={s.id}
+              >
+                {s.id}
+              </span>
+              {fromTask && (
+                <Badge tone="success" title={s.externalKey || undefined}>AgentTask</Badge>
+              )}
+              <Badge tone={STATUS_TONE[s.status] ?? 'primary'}>
+                {STATUS_LABEL[s.status] ?? s.status}
+              </Badge>
+              <span className="shrink-0 text-[13px] text-text-4">{relTime(s.updatedAt)}</span>
             </div>
-            <div style={S.agent}>{agentLabel}</div>
+            <div className="mt-1.5 text-[13.5px] font-medium text-primary-text">{agentLabel}</div>
             {taskRef && (
-              <div style={S.teamMeta}>
-                from AgentTask {taskRef.agentTaskId}
+              <div className="mt-1.5 text-[12.5px] text-success-text">
+                来自 AgentTask {taskRef.agentTaskId}
               </div>
             )}
-            {reason && <div style={S.stopReason}>stop: {reason}</div>}
-            <div style={S.mounts}>{mountSummary(s, envNameById)}</div>
-            <div style={S.cardFooter}>
+            {reason && (
+              <div className="mt-1 truncate text-[12.5px] text-text-3" title={reason}>
+                终止原因：{reason}
+              </div>
+            )}
+            <div className="mt-2 text-[12.5px] text-text-3">{mountSummary(s, envNameById)}</div>
+            <div className="mt-3 flex flex-wrap items-center gap-2.5 text-[12.5px]">
               {!archived && (
-                <button
-                  type="button"
-                  style={S.action}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0"
                   disabled={busyId === s.id}
                   onClick={() => navigate(`/managed/sessions/${encodeURIComponent(s.id)}`)}
                 >
-                  {fromTask ? 'View transcript' : 'Open chat'}
-                </button>
+                  {fromTask ? '查看执行记录' : '打开聊天'}
+                </Button>
               )}
               {taskRef && (
-                <button
-                  type="button"
-                  style={S.action}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0"
                   onClick={() => navigate(agentTaskDetailPath(taskRef))}
                 >
-                  Open AgentTask
-                </button>
+                  打开 AgentTask
+                </Button>
               )}
-              <button
-                type="button"
-                style={S.action}
+              <Button
+                variant="link"
+                size="sm"
+                className="px-0"
                 onClick={() => navigate(`/managed/sessions/${encodeURIComponent(s.id)}?tab=details`)}
               >
-                Details
-              </button>
+                详情
+              </Button>
               {!archived ? (
-                <button
-                  type="button"
-                  style={S.action}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0"
                   disabled={busyId === s.id}
-                  onClick={() => {
-                    if (!confirm('Archive this managed session?')) return;
-                    void runAction(s.id, () => archiveManagedSession(s.id));
-                  }}
+                  onClick={() => setPendingAction({ kind: 'archive', session: s })}
                 >
-                  Archive
-                </button>
+                  归档
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  style={S.action}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="px-0"
                   disabled={busyId === s.id}
                   onClick={() => void runAction(s.id, () => restoreManagedSession(s.id))}
                 >
-                  Restore
-                </button>
+                  恢复
+                </Button>
               )}
-              <button
-                type="button"
-                style={{ ...S.action, ...S.danger }}
+              <Button
+                variant="link"
+                size="sm"
+                className="px-0 text-danger-text"
                 disabled={busyId === s.id}
-                onClick={() => {
-                  if (!confirm('Delete this session entirely?')) return;
-                  void runAction(s.id, () => deleteManagedSession(s.id));
-                }}
+                onClick={() => setPendingAction({ kind: 'delete', session: s })}
               >
-                Delete
-              </button>
+                删除
+              </Button>
             </div>
-          </div>
+          </Card>
         );
       })}
-    </div>
+
+      <ConfirmDialog
+        open={!!pendingAction}
+        onOpenChange={open => { if (!open) setPendingAction(undefined); }}
+        title={pendingAction?.kind === 'delete'
+          ? `彻底删除会话「${pendingAction.session.id}」？`
+          : pendingAction?.kind === 'archive'
+            ? `归档会话「${pendingAction.session.id}」？`
+            : ''}
+        description={pendingAction?.kind === 'delete'
+          ? '删除后该会话及其消息记录不可恢复。'
+          : '归档后不再出现在活跃列表，可随时恢复。'}
+        dangerLevel={pendingAction?.kind === 'delete' ? 'danger' : 'warning'}
+        confirmLabel={pendingAction?.kind === 'delete' ? '删除' : '归档'}
+        cancelLabel="取消"
+        busy={!!pendingAction && busyId === pendingAction.session.id}
+        onConfirm={() => {
+          if (!pendingAction) return;
+          const { session, kind } = pendingAction;
+          setPendingAction(undefined);
+          void runAction(session.id, () =>
+            kind === 'delete' ? deleteManagedSession(session.id) : archiveManagedSession(session.id));
+        }}
+      />
+    </Page>
   );
 }
