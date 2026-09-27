@@ -25,6 +25,7 @@ import {
 } from '../api/subagents';
 import { AgentDefinition, listAgents } from '../api/agents';
 import { readFile } from '../api/workspace';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   agentId: string;
@@ -181,7 +182,7 @@ export default function SubagentPanel({ agentId, onChanged, readOnly = false }: 
       const list = await listSubagents(agentId);
       setItems(list);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load subagents');
+      setErr(apiErrorMessage(e, '子智能体加载失败'));
     } finally {
       setLoading(false);
     }
@@ -243,7 +244,7 @@ export default function SubagentPanel({ agentId, onChanged, readOnly = false }: 
       await reload();
       onChanged?.();
     } catch (e: unknown) {
-      setFormErr(e instanceof Error ? e.message : 'Save failed');
+      setFormErr(apiErrorMessage(e, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -257,7 +258,7 @@ export default function SubagentPanel({ agentId, onChanged, readOnly = false }: 
       await reload();
       onChanged?.();
     } catch (e: unknown) {
-      setFormErr(e instanceof Error ? e.message : 'Delete failed');
+      setFormErr(apiErrorMessage(e, '删除失败'));
     }
   }
 

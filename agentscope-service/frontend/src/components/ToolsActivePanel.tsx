@@ -27,6 +27,7 @@ import {
   fetchConfiguredActive,
   saveBuiltinToolConfig,
 } from '../api/tools';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   agentId: string;
@@ -136,7 +137,7 @@ export default function ToolsActivePanel({
         setCatalog(cat);
         setPolicies(computeToolPolicies(agent.tools));
       })
-      .catch(e => { if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed'); })
+      .catch(e => { if (!cancelled) setErr(apiErrorMessage(e, '操作失败')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [agentId, refreshKey]);
@@ -157,7 +158,7 @@ export default function ToolsActivePanel({
       await disableConfiguredTool(agentId, t);
       onChange();
     } catch (e: unknown) {
-      setActionErr(e instanceof Error ? e.message : 'Failed to update agent');
+      setActionErr(apiErrorMessage(e, '智能体更新失败'));
     }
   }
 
@@ -176,7 +177,7 @@ export default function ToolsActivePanel({
       await saveBuiltinToolConfig(agentId, catalog, enabled, next);
       onChange();
     } catch (e: unknown) {
-      setActionErr(e instanceof Error ? e.message : 'Failed to update permission');
+      setActionErr(apiErrorMessage(e, '权限更新失败'));
     }
   }
 

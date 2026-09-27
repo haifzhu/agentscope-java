@@ -31,6 +31,7 @@ import { ConversationSurface } from '@/features/conversation/ConversationSurface
 import { managedEventsToConversation } from '@/features/conversation/adapters';
 import { mergeContiguousEvents } from '@/features/conversation/eventCursor';
 import type { ConversationContentBlock } from '@/features/conversation/model';
+import { apiErrorMessage } from '@/lib/apiError';
 
 type Role = 'user' | 'assistant' | 'system' | 'error';
 
@@ -656,7 +657,7 @@ export default function ChatPanel({
       // resume cursor directly to the returned user event.
       for (const event of recorded) handleManagedEvent(event);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'send failed';
+      const msg = apiErrorMessage(e, '发送失败');
       setMessages(prev => [...prev, {
         id: nextId(),
         role: 'system',
@@ -689,7 +690,7 @@ export default function ChatPanel({
         }],
       }]);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'confirmation failed';
+      const msg = apiErrorMessage(e, '确认失败');
       setMessages(prev => [...prev, {
         id: nextId(),
         role: 'system',

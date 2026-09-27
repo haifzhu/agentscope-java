@@ -26,6 +26,49 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 1.5;
 const ZOOM_STEP = 0.15;
 
+export type GraphOffsets = Record<string, { x: number; y: number }>;
+
+/**
+ * 把拖拽偏移按「工作流 id」落在 sessionStorage。
+ *
+ * D 阶段收口：此前偏移只存在组件局部 state，切 tab / 刷新即回落到自动布局，
+ * 与用户「摆好的位置应该记住」的预期不符。这里做工作流级别的持久化，
+ * 仍以自动布局为真相——「自动布局」按钮会连同存储一起清空。
+ */
+function loadOffsets(storageKey: string): GraphOffsets {
+  if (typeof window === 'undefined' || !storageKey) return {};
+  try {
+    const raw = window.sessionStorage.getItem(storageKey);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const result: GraphOffsets = {};
+    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (
+        value &&
+        typeof value === 'object' &&
+        typeof (value as { x?: unknown }).x === 'number' &&
+        typeof (value as { y?: unknown }).y === 'number'
+      ) {
+        result[id] = { x: (value as { x: number }).x, y: (value as { y: number }).y };
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function saveOffsets(storageKey: string, offsets: GraphOffsets): void {
+  if (typeof window === 'undefined' || !storageKey) return;
+  try {
+    if (Object.keys(offsets).length === 0) window.sessionStorage.removeItem(storageKey);
+    else window.sessionStorage.setItem(storageKey, JSON.stringify(offsets));
+  } catch {
+    // 存储不可用（隐私模式 / 配额）时静默降级为不持久化，不影响画布交互。
+  }
+}
+
 interface GraphPoint {
   id: string;
   x: number;
@@ -37,19 +80,36 @@ export function WorkflowGraph({
   edges,
   selected,
   onSelect,
+  persistKey,
 }: {
   nodes: { id: string; label: string; type: string; state?: string }[];
   edges: { from: string; to: string; label?: string }[];
   selected?: string;
   onSelect: (id: string) => void;
+  /** 提供后，拖拽偏移按工作流粒度持久化（sessionStorage）。 */
+  persistKey?: string;
 }) {
   const marker = useId().replace(/:/g, "");
   const points = graphLayout(
     nodes.map((n) => n.id),
     edges,
   );
+  const storageKey = persistKey ? `workflow-graph-offsets:${persistKey}` : '';
   // 拖拽偏移（C11）：局部覆盖自动布局坐标，「自动布局」按钮一键还原。
-  const [offsets, setOffsets] = useState<Record<string, { x: number; y: number }>>({});
+  const [offsets, setOffsets] = useState<GraphOffsets>(() => loadOffsets(storageKey));
+
+  // 切换工作流时重新读取对应存储，避免把上一条工作流的坐标带过来。
+  // 用「上一 storageKey」比较而非 effect 依赖偏移，防止把本地的拖拽结果覆盖回去。
+  const loadedKeyRef = useRef(storageKey);
+  if (loadedKeyRef.current !== storageKey) {
+    loadedKeyRef.current = storageKey;
+    setOffsets(loadOffsets(storageKey));
+  }
+
+  const updateOffsets = (next: GraphOffsets) => {
+    setOffsets(next);
+    saveOffsets(storageKey, next);
+  };
   const [zoom, setZoom] = useState(1);
   const dragRef = useRef<{ id: string; startX: number; startY: number; base: { x: number; y: number } } | null>(null);
   const auto = new Map(points.map((p) => [p.id, p]));
@@ -66,7 +126,11 @@ export function WorkflowGraph({
       x: Math.max(0, drag.base.x + (event.clientX - drag.startX) / zoom),
       y: Math.max(0, drag.base.y + (event.clientY - drag.startY) / zoom),
     };
-    setOffsets((prev) => ({ ...prev, [drag.id]: next }));
+    setOffsets((prev) => {
+      const merged = { ...prev, [drag.id]: next };
+      saveOffsets(storageKey, merged);
+      return merged;
+    });
   };
   const endDrag = () => {
     dragRef.current = null;
@@ -110,7 +174,7 @@ export function WorkflowGraph({
           size="sm"
           variant="ghost"
           disabled={Object.keys(offsets).length === 0}
-          onClick={() => setOffsets({})}
+          onClick={() => updateOffsets({})}
           title="清除手动拖拽，恢复自动布局坐标"
         >
           自动布局

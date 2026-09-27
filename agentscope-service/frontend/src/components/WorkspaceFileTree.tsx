@@ -16,6 +16,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileNode, tree as fetchTree } from '../api/workspace';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   agentId: string;
@@ -182,7 +183,7 @@ export default function WorkspaceFileTree({ agentId, selectedPath, onSelect, ref
         return next;
       });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load files');
+      setErr(apiErrorMessage(e, '文件列表加载失败'));
     } finally {
       setLoading(false);
     }

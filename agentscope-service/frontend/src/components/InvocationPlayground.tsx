@@ -43,6 +43,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { selectEndpointTestCredential } from '@/components/endpointTestCredential';
+import { apiErrorMessage } from '@/lib/apiError';
 
 export interface InvocationPlaygroundProps {
   endpoint: Endpoint;
@@ -151,7 +152,7 @@ export function InvocationPlayground({
         setCredentialName(name);
       })
       .catch((cause) => {
-        if (!cancelled) setCredentialError(cause instanceof Error ? cause.message : 'Unable to load an Endpoint credential automatically.');
+        if (!cancelled) setCredentialError(apiErrorMessage(cause, '无法自动加载端点凭据。'));
       })
       .finally(() => {
         if (!cancelled) setCredentialLoading(false);
@@ -219,7 +220,7 @@ export function InvocationPlayground({
       setMessage('');
       onInvoked?.();
     } catch (cause) {
-      const failure = cause instanceof Error ? cause.message : 'Invocation failed';
+      const failure = apiErrorMessage(cause, '调用失败');
       setError(failure);
       setLocalMessages((current) => [...current, {
         id: `playground-error-${Date.now()}`,

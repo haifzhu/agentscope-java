@@ -46,6 +46,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { safeEndpointOwnerPath } from './endpointNavigation';
+import { apiErrorMessage } from '@/lib/apiError';
 
 type Tab = 'overview' | 'contract' | 'security' | 'playground' | 'invocations' | 'releases' | 'target';
 const tabs: { id: Tab; label: string }[] = [
@@ -110,7 +111,7 @@ export default function EndpointDetailPage() {
   };
   const lifecycle = useMutation({
     mutationFn: async (action: 'publish' | 'disable' | 'archive') => {
-      if (!endpoint) throw new Error('Endpoint is unavailable');
+      if (!endpoint) throw new Error('端点当前不可用');
       if (action === 'publish') return publishEndpoint(endpoint);
       if (action === 'disable') return disableEndpoint(endpoint);
       return archiveEndpoint(endpoint);
@@ -119,7 +120,7 @@ export default function EndpointDetailPage() {
       if (action === 'archive') navigate(scope.scopedPath(ownerPath));
       else refresh();
     },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Endpoint lifecycle update failed'),
+    onError: cause => setError(apiErrorMessage(cause, '端点生命周期更新失败')),
   });
   const credentialAction = useMutation({
     mutationFn: async (request: { type: 'create'; name: string } | { type: 'rotate' | 'revoke' | 'reveal'; id: string }) => {
@@ -136,11 +137,11 @@ export default function EndpointDetailPage() {
       setCredentialName('');
       refresh();
     },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Credential update failed'),
+    onError: cause => setError(apiErrorMessage(cause, '凭据更新失败')),
   });
   const updateContract = useMutation({
     mutationFn: async () => {
-      if (!endpoint) throw new Error('Endpoint is unavailable');
+      if (!endpoint) throw new Error('端点当前不可用');
       const operational = {
         timeoutSeconds: Number(timeoutText),
         maxPayloadBytes: Number(maxPayloadText),
@@ -154,28 +155,28 @@ export default function EndpointDetailPage() {
       });
     },
     onSuccess: () => { setEditingContract(false); refresh(); },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Contract update failed'),
+    onError: cause => setError(apiErrorMessage(cause, '契约更新失败')),
   });
   const rollback = useMutation({
     mutationFn: (releaseId: string) => {
-      if (!endpoint) throw new Error('Endpoint is unavailable');
+      if (!endpoint) throw new Error('端点当前不可用');
       return rollbackEndpointRelease(endpoint, releaseId);
     },
     onSuccess: refresh,
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Rollback failed'),
+    onError: cause => setError(apiErrorMessage(cause, '回滚失败')),
   });
   const updateDetails = useMutation({
     mutationFn: () => {
-      if (!endpoint) throw new Error('Endpoint is unavailable');
-      if (!nameText.trim()) throw new Error('API name is required');
+      if (!endpoint) throw new Error('端点当前不可用');
+      if (!nameText.trim()) throw new Error('请填写接口名称');
       return patchEndpoint(endpoint, { name: nameText.trim(), description: descriptionText.trim() });
     },
     onSuccess: () => { setEditingDetails(false); setError(''); refresh(); },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'API details update failed'),
+    onError: cause => setError(apiErrorMessage(cause, '接口信息更新失败')),
   });
 
   if (endpointQuery.isLoading) return <Page><p className="text-sm text-muted-foreground">正在加载端点…</p></Page>;
-  if (!endpoint) return <Page><PageHeader title="端点不可用" /><p className="text-sm text-danger-text">{endpointQuery.error instanceof Error ? endpointQuery.error.message : '未找到该端点。'}</p></Page>;
+  if (!endpoint) return <Page><PageHeader title="端点不可用" /><p className="text-sm text-danger-text">{apiErrorMessage(endpointQuery.error, '未找到该端点。')}</p></Page>;
   const invokePath = `/invoke/v1/endpoints/${endpoint.slug}/${endpoint.invocationMode === 'job' ? 'jobs' : 'conversations'}`;
   const ownerLabel = endpoint.targetType === 'agent' ? 'Agent' : endpoint.targetType === 'team' ? 'Team' : 'Workflow';
 

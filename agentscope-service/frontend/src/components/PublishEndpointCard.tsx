@@ -39,6 +39,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface PublishEndpointCardProps {
   targetType: EndpointTargetType;
@@ -154,7 +155,7 @@ export function PublishEndpointCard({
       return deployEndpointRelease(endpoint, targetRef, `deploy ${targetName}`);
     },
     onSuccess: () => { setDeployEndpointId(''); setError(''); refresh(); },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Release deployment failed'),
+    onError: cause => setError(apiErrorMessage(cause, '发布部署失败')),
   });
 
   function submit(event: FormEvent) {

@@ -31,6 +31,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input, Textarea } from '@/components/ui/input';
 
 import { RuntimeHostCapacity } from './RuntimeHostCapacity';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const reasoningLevels = ['', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 
@@ -225,7 +226,7 @@ export function HostedAgentSettings({ agent, canEdit }: { agent: AgentDefinition
       ]);
       setMessage({ tone: 'ok', text: 'Hosted execution settings saved. New attempts use the updated configuration.' });
     } catch (error) {
-      setMessage({ tone: 'error', text: error instanceof Error ? error.message : 'Failed to save settings' });
+      setMessage({ tone: 'error', text: apiErrorMessage(error, '设置保存失败') });
     } finally {
       setSaving(false);
     }

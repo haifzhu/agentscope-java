@@ -22,6 +22,7 @@ import { useControlPlaneScope } from '@/app/ScopeContext';
 import { updateAgent, type AgentDefinition, type WorkspaceBinding } from '@/api/agents';
 import { listWorkspaces, workspaceRevisions } from '@/api/workspaces';
 import { Button } from '@/components/ui/button';
+import { apiErrorMessage } from '@/lib/apiError';
 
 export type WorkspaceCapabilities = { bindings: Array<{ bindingId: string; kind: string; runtime: string; status: string; capabilities: Array<{ name: string; mode: string; requested: boolean; supported: boolean; target?: string; reason?: string }> }>; applications?: Array<{ digest: string; version: number; workspaceVersion: number; appliedAt: number }> };
 
@@ -42,7 +43,7 @@ export default function WorkspaceBindingPanel({ agent, canEdit, onSaved }: { age
       if (agent.version == null) await api.post(`/api/v1/agents/${agent.id}/definition`, {});
       await updateAgent(agent.id, { name: agent.name, workspaceId, workspaceBinding: workspaceId ? binding : null, ...(binding.overrides.includes('skills') ? { skills } : {}), ...(workspaceId ? {} : { system: binding.instructions || '' }), version: agent.version });
       await onSaved(); await revisions.refetch(); await capabilities.refetch();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save Workspace binding'); }
+    } catch (e) { setError(apiErrorMessage(e, '工作空间绑定保存失败')); }
     finally { setBusy(false); }
   }
   return <section className="space-y-4 rounded-xl border p-5">

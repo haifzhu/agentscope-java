@@ -45,6 +45,7 @@ import {
   WorkPanelHeader,
 } from "./WorkSurface";
 import { formatRelative } from "@/lib/format";
+import { issueStatusLabel } from "@/features/issues/issueStatus";
 import { getRoles } from "@/lib/auth";
 
 type ActivityWithIssue = IssueActivity & { issue: Issue };
@@ -89,14 +90,6 @@ function dayLabel(value: string) {
   if (date.toDateString() === today.toDateString()) return "今天";
   if (date.toDateString() === yesterday.toDateString()) return "昨天";
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: date.getFullYear() === today.getFullYear() ? undefined : "numeric" });
-}
-
-const ISSUE_STATUS_LABELS: Record<string, string> = {
-  todo: "待处理", in_progress: "进行中", in_review: "评审中", blocked: "受阻", done: "已完成", cancelled: "已取消",
-};
-function issueStatusLabel(value: string) {
-  if (!value) return "—";
-  return ISSUE_STATUS_LABELS[value] || value.replace(/_/g, " ");
 }
 
 export default function WorkActivityPage() {

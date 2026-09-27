@@ -725,6 +725,7 @@ function WorkflowDetail({ id }: { id: string }) {
               readOnly={!canEdit}
               teams={teams.data?.items || []}
               revisions={subrevisions.data || []}
+              persistKey={id}
             />
           )}
           <details open={!parsed.spec}>

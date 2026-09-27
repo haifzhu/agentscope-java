@@ -19,6 +19,7 @@ import {
   ChannelInfo, AgentBinding, BindingTier, BindingCreateRequest,
   listChannels, listAgentBindings, addBinding, updateBinding, deleteBinding, setChannelDefault,
 } from '../api/channels';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   agentId: string;
@@ -163,7 +164,7 @@ export default function ChannelBindingTable({ agentId }: Props) {
       setChannels(c);
       setBindings(b);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to load');
+      setErr(apiErrorMessage(e, '加载失败'));
     }
   }
 
@@ -190,7 +191,7 @@ export default function ChannelBindingTable({ agentId }: Props) {
       setDirty(true);
       reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+      setErr(apiErrorMessage(e, '保存失败'));
     }
   }
 
@@ -201,7 +202,7 @@ export default function ChannelBindingTable({ agentId }: Props) {
       setDirty(true);
       reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Delete failed');
+      setErr(apiErrorMessage(e, '删除失败'));
     }
   }
 
@@ -211,7 +212,7 @@ export default function ChannelBindingTable({ agentId }: Props) {
       setDirty(true);
       reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setErr(apiErrorMessage(e, '操作失败'));
     }
   }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type { AgentDefinition, AgentVersionEntry } from '@/api/agents';
 import { getVersion, listVersions } from '@/api/agents';
@@ -58,6 +58,17 @@ export default function AgentVersionsPanel() {
   const [selection, setSelection] = useState<DiffSelection>({ baseVersion: null, targetVersion: null });
   const [snapshots, setSnapshots] = useState<Record<number, AgentVersionEntry>>({});
   const [diffError, setDiffError] = useState<string | null>(null);
+
+  // 快照缓存失效（D 阶段 MEDIUM-2）：快照只按版本号做键，而版本号会在
+  // 「切换智能体」或「发布新版本」后与新快照内容错位，导致旧快照残留。
+  // 缓存身份改为 agentId + 当前版本，任一变化即整体失效重取。
+  const snapshotKey = `${agentId}:${currentVersion ?? ''}`;
+  const snapshotKeyRef = useRef(snapshotKey);
+  if (snapshotKeyRef.current !== snapshotKey) {
+    snapshotKeyRef.current = snapshotKey;
+    setSnapshots({});
+    setSelection({ baseVersion: null, targetVersion: null });
+  }
 
   const visibleVersions = useMemo(
     () => (expanded ? versions : versions.slice(0, PAGE_SIZE)),

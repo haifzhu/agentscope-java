@@ -41,6 +41,7 @@ import type { ConversationMessage } from '@/features/conversation/model';
 import { finishesConversationTurn } from '@/features/conversation/turnState';
 import { useSessionEvents } from '@/features/operate/lib/useSessionEvents';
 import { formatRelative } from '@/lib/format';
+import { apiErrorMessage } from '@/lib/apiError';
 
 function firstTitle(message: string): string {
   const value = message.trim().replace(/\s+/g, ' ');
@@ -132,7 +133,7 @@ function ChatWorkspace({ chat, onChanged, initialDraft = '' }: { chat: Chat; onC
     } catch (cause) {
       setPending(false);
       setPendingMessage('');
-      setError(cause instanceof Error ? cause.message : 'Failed to send message');
+      setError(apiErrorMessage(cause, '消息发送失败'));
     }
   }
 
@@ -244,7 +245,7 @@ export default function ChatPage() {
       setError('');
       await queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Unable to delete Chat'),
+    onError: cause => setError(apiErrorMessage(cause, '无法删除该会话')),
   });
   const restore = useMutation({
     mutationFn: (chat: Chat) => updateChat(chat, { status: 'active' }),
@@ -253,7 +254,7 @@ export default function ChatPage() {
       select();
       await queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
-    onError: cause => setError(cause instanceof Error ? cause.message : 'Unable to restore Chat'),
+    onError: cause => setError(apiErrorMessage(cause, '无法恢复该会话')),
   });
 
   async function start(value: string) {
@@ -275,7 +276,7 @@ export default function ChatPage() {
         setRetryDraft({ chatId: created.id, text: value });
         setDraft('');
       }
-      setError(cause instanceof Error ? cause.message : 'Failed to start Chat');
+      setError(apiErrorMessage(cause, '无法启动会话'));
     } finally {
       setCreating(false);
     }

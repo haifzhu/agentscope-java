@@ -27,6 +27,7 @@ import { Environment, listEnvironments } from '../api/environments';
 import { MemoryStore, listMemoryStores } from '../api/memoryStores';
 import { Vault, listVaults } from '../api/vaults';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const S: Record<string, React.CSSProperties> = {
   root: { padding: '28px 32px', minWidth: 0, maxWidth: 1100 },
@@ -134,7 +135,7 @@ export default function SessionTranscript({
       setModel(typeof ov.model === 'string' ? ov.model : '');
       setMaxIters(ov.maxIters != null ? String(ov.maxIters) : '');
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setErr(apiErrorMessage(e, '操作失败'));
     }
   }
 
@@ -149,7 +150,7 @@ export default function SessionTranscript({
       await archiveManagedSession(sessionId);
       await reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setErr(apiErrorMessage(e, '操作失败'));
     }
   }
 
@@ -158,7 +159,7 @@ export default function SessionTranscript({
       await restoreManagedSession(sessionId);
       await reload();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setErr(apiErrorMessage(e, '操作失败'));
     }
   }
 
@@ -169,7 +170,7 @@ export default function SessionTranscript({
       if (onDeleted) onDeleted();
       else navigate(`/managed/sessions?agentId=${encodeURIComponent(agentId)}`, { replace: true });
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed');
+      setErr(apiErrorMessage(e, '操作失败'));
     }
   }
 

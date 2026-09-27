@@ -23,23 +23,13 @@ import {
   type Issue,
 } from "@/api/collaboration";
 
+import { issueStatusLabel } from "./issueStatus";
+
+// 状态标签字典已收口到 issueStatus.ts；此处转发以保持既有 import 路径可用。
+export { ISSUE_STATUS_LABELS, issueStatusLabel, issueStatusTone } from "./issueStatus";
+
 /** 看板列（PRD 5.10.2：按 7 个状态分列；backlog 归入待办列）。 */
 export const KANBAN_COLUMNS = ["todo", "open", "in_progress", "in_review", "blocked", "done", "cancelled"] as const;
-
-export const ISSUE_STATUS_LABELS: Record<string, string> = {
-  backlog: "待办",
-  todo: "待办",
-  open: "已开放",
-  in_progress: "进行中",
-  in_review: "评审中",
-  blocked: "被阻塞",
-  done: "已完成",
-  cancelled: "已取消",
-};
-
-export function issueStatusLabel(status: string): string {
-  return ISSUE_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
-}
 
 /**
  * 状态机合法流转表（PRD 5.10.3：按合法路径变更，非法流转在界面上不可选）。

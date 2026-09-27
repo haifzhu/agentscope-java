@@ -29,6 +29,7 @@ import {
   listInstalledMcpNames,
   saveBuiltinToolConfig,
 } from '../api/tools';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   agentId: string;
@@ -160,7 +161,7 @@ function BuiltinTab({ agentId, onSaved }: { agentId: string; onSaved: () => void
         setPolicies(next);
         setDirty(false);
       })
-      .catch(e => { if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed'); })
+      .catch(e => { if (!cancelled) setErr(apiErrorMessage(e, '操作失败')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [agentId]);
@@ -191,7 +192,7 @@ function BuiltinTab({ agentId, onSaved }: { agentId: string; onSaved: () => void
       setDirty(false);
       onSaved();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Save failed');
+      setErr(apiErrorMessage(e, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -285,7 +286,7 @@ function McpTab({ agentId, onSaved }: { agentId: string; onSaved: () => void }) 
         setCatalog(cat);
         setInstalled(inst.names);
       })
-      .catch(e => { if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed'); })
+      .catch(e => { if (!cancelled) setErr(apiErrorMessage(e, '操作失败')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [agentId]);
@@ -382,7 +383,7 @@ function McpAddForm({ entry, existingNames, onCancel, onSubmit }: AddFormProps) 
       }
       await onSubmit(name.trim(), server);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Add failed');
+      setErr(apiErrorMessage(e, '添加失败'));
     } finally {
       setBusy(false);
     }

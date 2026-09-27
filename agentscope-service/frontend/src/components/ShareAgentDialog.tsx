@@ -24,6 +24,7 @@ import {
 import { addShare, listShares, revokeShare } from '../api/shares';
 import { AdminUserView, listUsers } from '../api/admin';
 import { isAdmin } from '../api/auth';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const S: Record<string, React.CSSProperties> = {
   scrim: {
@@ -162,7 +163,7 @@ export default function ShareAgentDialog({ agent, onClose }: Props) {
       }
       setGrants(await listShares(agent.id));
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to update workspace grant');
+      setErr(apiErrorMessage(e, '工作空间授权更新失败'));
     } finally {
       setBusy(false);
     }

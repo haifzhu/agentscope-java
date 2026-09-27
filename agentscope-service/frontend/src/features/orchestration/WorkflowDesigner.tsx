@@ -29,12 +29,15 @@ export function WorkflowDesigner({
   readOnly = false,
   teams,
   revisions,
+  persistKey,
 }: {
   spec: DefinitionSpec;
   onChange: (v: DefinitionSpec) => void;
   readOnly?: boolean;
   teams: { id: string; name: string }[];
   revisions: { id: string; name: string }[];
+  /** 工作流标识：用于按工作流持久化画布拖拽位置。 */
+  persistKey?: string;
 }) {
   const [selected, setSelected] = useState(spec.nodes[0]?.key || "");
   const [kind, setKind] = useState("agent");
@@ -99,6 +102,7 @@ export function WorkflowDesigner({
             edges={(spec.edges || []).map((e) => ({ from: e.from, to: e.to }))}
             selected={selected}
             onSelect={setSelected}
+            persistKey={persistKey}
           />
           {!readOnly && (
             <form

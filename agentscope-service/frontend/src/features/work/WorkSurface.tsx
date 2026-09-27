@@ -17,6 +17,8 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import type { Tone } from "@/components/ui/tokens";
+import { issueStatusLabel, issueStatusTone } from "@/features/issues/issueStatus";
 import { cn } from "@/lib/utils";
 
 export function WorkPage({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -93,26 +95,19 @@ export function WorkPanelHeader({
   );
 }
 
-const statusMeta: Record<string, { label: string; tone: "default" | "success" | "warning" | "danger" | "info" }> = {
-  backlog: { label: "待办", tone: "default" },
-  todo: { label: "待办", tone: "default" },
-  open: { label: "已开放", tone: "info" },
-  in_progress: { label: "进行中", tone: "info" },
-  in_review: { label: "评审中", tone: "warning" },
-  blocked: { label: "被阻塞", tone: "danger" },
-  done: { label: "已完成", tone: "success" },
+const statusMeta: Record<string, { label: string; tone: Tone }> = {
+  // 非事项状态（审批/执行等）在此补充；事项状态取自共享字典，避免两处漂移。
   completed: { label: "已完成", tone: "success" },
   approved: { label: "已批准", tone: "success" },
   rejected: { label: "已驳回", tone: "danger" },
   failed: { label: "失败", tone: "danger" },
-  cancelled: { label: "已取消", tone: "default" },
   pending: { label: "待处理", tone: "warning" },
 };
 
 export function WorkStatusBadge({ status, className }: { status: string; className?: string }) {
-  const meta = statusMeta[status] || {
-    label: status.replace(/_/g, " "),
-    tone: "default" as const,
+  const meta = statusMeta[status] ?? {
+    label: issueStatusLabel(status),
+    tone: issueStatusTone(status),
   };
   return (
     <Badge tone={meta.tone} className={className}>

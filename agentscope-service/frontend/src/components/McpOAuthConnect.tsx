@@ -21,6 +21,7 @@ import { cancelMcpOAuth, completeMcpOAuth, disconnectMcpOAuth, getMcpOAuthStatus
 import { createGitHubConnection, getGitHubProvider, isGitHubMcp, verifyGitHubConnection } from '../api/mcpOAuth';
 import { isAdmin } from '../lib/auth';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { apiErrorMessage } from '@/lib/apiError';
 
 interface Props {
   server: McpServerSpec;
@@ -30,7 +31,7 @@ interface Props {
 const field: React.CSSProperties = { width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 };
 const button: React.CSSProperties = { padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff' };
 const emptySettings = (): McpOAuthSettings => ({ authorizationEndpoint: '', tokenEndpoint: '', clientId: '', authMethod: 'client_secret_basic', scope: '' });
-const errorText = (e: unknown) => e instanceof Error ? e.message : 'OAuth request failed';
+const errorText = (e: unknown) => apiErrorMessage(e, 'OAuth 请求失败');
 
 export default function McpOAuthConnect({ server, onClose, onConnected }: Props) {
   const [vaults, setVaults] = useState<Vault[]>([]);

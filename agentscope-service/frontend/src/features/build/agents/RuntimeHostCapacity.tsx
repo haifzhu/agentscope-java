@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { namespaceCan } from '@/lib/namespaceScope';
+import { apiErrorMessage } from '@/lib/apiError';
 
 function HostCapacityForm({ host, onSaved }: { host: RuntimeHost; onSaved: () => Promise<void> }) {
   const [capacity, setCapacity] = useState(String(host.capacity));
@@ -33,7 +34,7 @@ function HostCapacityForm({ host, onSaved }: { host: RuntimeHost; onSaved: () =>
       setDirty(false);
       setMessage('Capacity saved. The Host applies it on its next heartbeat (normally within 15 seconds), or when it reconnects.');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not save capacity.');
+      setError(apiErrorMessage(cause, '容量保存失败'));
     } finally { setSaving(false); }
   }
   return <form onSubmit={event => void save(event)} className="grid gap-3 rounded-lg border p-4" aria-label={`Capacity for ${host.hostKey}`}>
