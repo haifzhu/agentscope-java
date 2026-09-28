@@ -184,9 +184,11 @@ export default function EnvironmentsHubPage() {
             </div>
             <div className="text-xs text-text-3">
               workers:{' '}
-              {Object.keys(hands.workerHeartbeats).length === 0
+              {/* workerHeartbeats 在无 worker 时可能缺省，缺省按「无」处理，
+                  不要让 Object.keys(undefined) 把整页打崩。 */}
+              {Object.entries(hands.workerHeartbeats ?? {}).length === 0
                 ? '无'
-                : Object.entries(hands.workerHeartbeats)
+                : Object.entries(hands.workerHeartbeats ?? {})
                     .map(
                       ([id, ts]) =>
                         `${id}@${new Date(ts).toLocaleTimeString()}`,
