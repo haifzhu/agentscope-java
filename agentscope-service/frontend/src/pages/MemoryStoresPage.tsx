@@ -15,10 +15,10 @@
  */
 
 import { ResourceConsumers } from '../components/ResourceConsumers';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Database, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
-  Memory,
   MemoryStore,
   archiveMemoryStore,
   createMemoryStore,
@@ -41,51 +41,62 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Input, Textarea } from '../components/ui/input';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Page, PageHeader } from '../components/Page';
+import { apiErrorMessage } from '../lib/apiError';
 import { cn } from '../lib/utils';
 
+type PendingTarget =
+  | { kind: 'archiveStore'; store: MemoryStore }
+  | { kind: 'deleteStore'; store: MemoryStore }
+  | { kind: 'redactMemory'; store: MemoryStore; path: string }
+  | { kind: 'deleteMemory'; store: MemoryStore; path: string };
+
 export default function MemoryStoresPage() {
-  const [stores, setStores] = useState<MemoryStore[]>([]);
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<MemoryStore | null>(null);
-  const [memories, setMemories] = useState<Memory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<{ path: string; content: string } | null>(null);
   const [storeName, setStoreName] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingTarget>();
 
-  async function refreshStores() {
-    setLoading(true);
-    setErr(null);
-    try {
-      setStores(await listMemoryStores());
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // 记忆库列表走 Query（D 阶段 MEDIUM-2）：竞态与缓存交给 queryKey 管理，
+  // 取代原先手写 useState + useEffect 的加载链路。
+  const storesQuery = useQuery({
+    queryKey: ['memory-stores'],
+    queryFn: listMemoryStores,
+    retry: false,
+  });
+  const stores = storesQuery.data ?? [];
 
-  async function loadMemories(store: MemoryStore) {
-    setSelected(store);
-    setErr(null);
-    try {
-      setMemories(await listMemories(store.id));
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '记忆加载失败');
-    }
-  }
+  // 记忆列表按记忆库 id 分键：快速切换记忆库时，晚到的响应只会写回它自己那一格，
+  // 不会再覆盖当前选中的记忆库（此前手写 state 存在此竞态）。
+  const memoriesQuery = useQuery({
+    queryKey: ['memory-stores', selected?.id, 'memories'],
+    queryFn: () => listMemories(selected!.id),
+    enabled: !!selected,
+    retry: false,
+  });
+  const memories = memoriesQuery.data ?? [];
 
-  useEffect(() => {
-    void refreshStores();
-  }, []);
+  const invalidateStores = () =>
+    queryClient.invalidateQueries({ queryKey: ['memory-stores'] });
+  const invalidateMemories = (storeId: string) =>
+    queryClient.invalidateQueries({ queryKey: ['memory-stores', storeId, 'memories'] });
+
+  const loading = storesQuery.isLoading;
+  const queryError =
+    storesQuery.error ?? (selected ? memoriesQuery.error : null);
+  const errorText = queryError ? apiErrorMessage(queryError, '加载失败') : err;
 
   async function handleCreateStore(e: React.FormEvent) {
     e.preventDefault();
     if (!storeName.trim()) return;
     setBusyId('create');
+    setErr(null);
     try {
       const created = await createMemoryStore({
         name: storeName.trim(),
@@ -94,58 +105,47 @@ export default function MemoryStoresPage() {
       setCreating(false);
       setStoreName('');
       setStoreDesc('');
-      await refreshStores();
-      await loadMemories(created);
+      await invalidateStores();
+      setSelected(created);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '创建失败');
+      setErr(apiErrorMessage(e, '创建失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleArchiveStore(id: string) {
-    if (!confirm('确认归档该记忆库？归档后新会话将不再挂载它。')) return;
-    setBusyId(id);
+  async function runStoreAction(
+    store: MemoryStore,
+    action: 'archive' | 'delete',
+  ) {
+    setBusyId(store.id);
+    setErr(null);
     try {
-      await archiveMemoryStore(id);
-      if (selected?.id === id) {
-        setSelected(null);
-        setMemories([]);
-      }
-      await refreshStores();
+      if (action === 'archive') await archiveMemoryStore(store.id);
+      else await deleteMemoryStore(store.id);
+      if (selected?.id === store.id) setSelected(null);
+      queryClient.removeQueries({ queryKey: ['memory-stores', store.id, 'memories'] });
+      await invalidateStores();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '归档失败');
+      setErr(apiErrorMessage(e, action === 'archive' ? '归档失败' : '删除失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleDeleteStore(id: string) {
-    if (!confirm('确认删除该记忆库及其全部记忆？此操作不可恢复。')) return;
-    setBusyId(id);
-    try {
-      await deleteMemoryStore(id);
-      if (selected?.id === id) {
-        setSelected(null);
-        setMemories([]);
-      }
-      await refreshStores();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '删除失败');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleRedactMemory(path: string) {
-    if (!selected) return;
-    if (!confirm(`确认永久擦除「${path}」？版本历史将被清空。`)) return;
+  async function runMemoryAction(
+    store: MemoryStore,
+    path: string,
+    action: 'redact' | 'delete',
+  ) {
     setBusyId(path);
+    setErr(null);
     try {
-      await redactMemory(selected.id, path);
-      await loadMemories(selected);
+      if (action === 'redact') await redactMemory(store.id, path);
+      else await deleteMemory(store.id, path);
+      await invalidateMemories(store.id);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '擦除失败');
+      setErr(apiErrorMessage(e, action === 'redact' ? '擦除失败' : '删除失败'));
     } finally {
       setBusyId(null);
     }
@@ -155,25 +155,13 @@ export default function MemoryStoresPage() {
     e.preventDefault();
     if (!selected || !editing) return;
     setBusyId('save');
+    setErr(null);
     try {
       await putMemory(selected.id, editing.path, { content: editing.content });
       setEditing(null);
-      await loadMemories(selected);
+      await invalidateMemories(selected.id);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '保存失败');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDeleteMemory(path: string) {
-    if (!selected || !confirm(`确认删除记忆「${path}」？`)) return;
-    setBusyId(path);
-    try {
-      await deleteMemory(selected.id, path);
-      await loadMemories(selected);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '删除失败');
+      setErr(apiErrorMessage(e, '保存失败'));
     } finally {
       setBusyId(null);
     }
@@ -194,10 +182,10 @@ export default function MemoryStoresPage() {
         托管智能体通过记忆工具按需发现并读取已绑定的文档，完整记忆库不会自动加入每次模型提示。共享知识在执行期间为只读，请在此更新文档。会话工作记忆与本共享库相互独立。
       </div>
       <AsyncState
-        status={loading ? 'loading' : err ? 'error' : stores.length ? 'ready' : 'empty'}
+        status={loading ? 'loading' : errorText ? 'error' : stores.length ? 'ready' : 'empty'}
         resource="记忆库"
-        errorDescription={err ?? undefined}
-        onRetry={() => void refreshStores()}
+        errorDescription={errorText ?? undefined}
+        onRetry={() => void storesQuery.refetch()}
         emptyDescription="尚未创建记忆库。"
       >
         <div className="grid gap-6 lg:grid-cols-[minmax(260px,1fr)_minmax(0,2fr)]">
@@ -209,7 +197,7 @@ export default function MemoryStoresPage() {
                   'cursor-pointer space-y-2 p-4',
                   selected?.id === s.id && 'border-primary bg-primary-soft',
                 )}
-                onClick={() => void loadMemories(s)}
+                onClick={() => setSelected(s)}
               >
                 <div className="flex items-center gap-2">
                   <Database className="h-4 w-4 text-text-3" />
@@ -226,7 +214,7 @@ export default function MemoryStoresPage() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void handleArchiveStore(s.id);
+                      setPending({ kind: 'archiveStore', store: s });
                     }}
                   >
                     <Archive className="h-3.5 w-3.5" /> 归档
@@ -238,7 +226,7 @@ export default function MemoryStoresPage() {
                     className="text-danger-text"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void handleDeleteStore(s.id);
+                      setPending({ kind: 'deleteStore', store: s });
                     }}
                   >
                     <Trash2 className="h-3.5 w-3.5" /> 删除
@@ -280,10 +268,10 @@ export default function MemoryStoresPage() {
                           <Button type="button" variant="outline" size="sm" onClick={() => setEditing({ path: m.path, content: m.content })}>
                             <Pencil className="h-3.5 w-3.5" /> 编辑
                           </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={() => void handleRedactMemory(m.path)}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setPending({ kind: 'redactMemory', store: selected!, path: m.path })}>
                             擦除
                           </Button>
-                          <Button type="button" variant="outline" size="sm" className="text-danger-text" onClick={() => void handleDeleteMemory(m.path)}>
+                          <Button type="button" variant="outline" size="sm" className="text-danger-text" onClick={() => setPending({ kind: 'deleteMemory', store: selected!, path: m.path })}>
                             <Trash2 className="h-3.5 w-3.5" /> 删除
                           </Button>
                         </td>
@@ -307,6 +295,60 @@ export default function MemoryStoresPage() {
           </div>
         </div>
       </AsyncState>
+
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(undefined); }}
+        title={
+          pending?.kind === 'deleteStore'
+            ? `删除记忆库「${pending.store.name}」及其全部记忆？`
+            : pending?.kind === 'archiveStore'
+              ? `归档记忆库「${pending.store.name}」？`
+              : pending?.kind === 'redactMemory'
+                ? `永久擦除记忆「${pending.path}」？`
+                : pending?.kind === 'deleteMemory'
+                  ? `删除记忆「${pending.path}」？`
+                  : ''
+        }
+        description={
+          pending?.kind === 'deleteStore'
+            ? '该记忆库及其全部记忆将被永久删除，此操作不可恢复。'
+            : pending?.kind === 'archiveStore'
+              ? '归档后新会话将不再挂载它，既有内容保留。'
+              : pending?.kind === 'redactMemory'
+                ? '版本历史将被清空，且不可恢复。'
+                : pending?.kind === 'deleteMemory'
+                  ? '删除后该路径下的记忆内容不可恢复。'
+                  : undefined
+        }
+        dangerLevel={
+          pending?.kind === 'deleteStore' || pending?.kind === 'redactMemory' || pending?.kind === 'deleteMemory'
+            ? 'danger'
+            : 'warning'
+        }
+        confirmLabel={
+          pending?.kind === 'archiveStore' ? '归档'
+            : pending?.kind === 'redactMemory' ? '擦除'
+              : '删除'
+        }
+        cancelLabel="取消"
+        busy={
+          !!pending &&
+          (busyId === pending.store.id ||
+            (pending.kind === 'redactMemory' || pending.kind === 'deleteMemory'
+              ? busyId === pending.path
+              : false))
+        }
+        onConfirm={() => {
+          if (!pending) return;
+          const target = pending;
+          setPending(undefined);
+          if (target.kind === 'archiveStore') void runStoreAction(target.store, 'archive');
+          else if (target.kind === 'deleteStore') void runStoreAction(target.store, 'delete');
+          else if (target.kind === 'redactMemory') void runMemoryAction(target.store, target.path, 'redact');
+          else void runMemoryAction(target.store, target.path, 'delete');
+        }}
+      />
 
       <Dialog open={creating} onOpenChange={setCreating}>
         <DialogContent size="md">

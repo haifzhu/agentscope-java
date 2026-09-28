@@ -6,6 +6,7 @@ import {
   updateAutomation,
   previewAutomationSchedule,
   type Automation,
+  type AutomationExecution,
   type AutomationSaved,
   type AutomationTrigger,
 } from "@/api/automations";
@@ -29,6 +30,7 @@ import {
   defaultTrigger,
   executionForForm,
 } from "./form";
+import { useFormDraft } from "@/lib/useFormDraft";
 
 const selectClass =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm";
@@ -249,16 +251,17 @@ export function AutomationEditor({
   onSaved: (saved: AutomationSaved) => void;
 }) {
   const scope = useControlPlaneScope();
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState(rule?.name || "");
-  const [description, setDescription] = useState(rule?.description || "");
-  const [enabled, setEnabled] = useState(rule?.enabled ?? true);
-  const [execution, setExecution] = useState(() => executionForForm(rule));
-  const [triggers, setTriggers] = useState<AutomationTrigger[]>(() =>
-    rule ? structuredClone(rule.triggers || []) : [defaultTrigger()],
-  );
-  const [contextLinks, setContextLinks] = useState(() =>
-    (rule?.execution?.contextRefs || [])
+  // 向导草稿（D 阶段 MEDIUM-1）：四步输入整体持久化，刷新/误关后可恢复；
+  // 提交成功或显式放弃时清空。新建与编辑用不同 key，互不串草稿。
+  const draftKey = rule ? `edit:${rule.id}` : `create:${scope.tenant}:${scope.namespace}`;
+  const draft = useFormDraft(draftKey, () => ({
+    step: 0,
+    name: rule?.name || "",
+    description: rule?.description || "",
+    enabled: rule?.enabled ?? true,
+    execution: executionForForm(rule),
+    triggers: (rule ? structuredClone(rule.triggers || []) : [defaultTrigger()]) as AutomationTrigger[],
+    contextLinks: (rule?.execution?.contextRefs || [])
       .filter(
         (v): v is { url: string } =>
           !!v &&
@@ -268,7 +271,20 @@ export function AutomationEditor({
       )
       .map((v) => v.url)
       .join("\n"),
-  );
+  }));
+  const { step, name, description, enabled, execution, triggers, contextLinks } = draft.value;
+  const setStep = (next: number) => draft.setValue((prev) => ({ ...prev, step: next }));
+  const setName = (next: string) => draft.setValue((prev) => ({ ...prev, name: next }));
+  const setDescription = (next: string) => draft.setValue((prev) => ({ ...prev, description: next }));
+  const setEnabled = (next: boolean) => draft.setValue((prev) => ({ ...prev, enabled: next }));
+  const setExecution = (next: AutomationExecution) =>
+    draft.setValue((prev) => ({ ...prev, execution: next }));
+  const setTriggers = (next: AutomationTrigger[] | ((prev: AutomationTrigger[]) => AutomationTrigger[])) =>
+    draft.setValue((prev) => ({
+      ...prev,
+      triggers: typeof next === "function" ? next(prev.triggers) : next,
+    }));
+  const setContextLinks = (next: string) => draft.setValue((prev) => ({ ...prev, contextLinks: next }));
   const user = useQuery({ queryKey: ["automation-current-user"], queryFn: me });
   const subscriberRef = user.data?.userId || user.data?.username;
   const teams = useQuery({
@@ -309,7 +325,10 @@ export function AutomationEditor({
         ? updateAutomation(rule.id, { ...body, expectedVersion: rule.version })
         : createAutomation(body);
     },
-    onSuccess: onSaved,
+    onSuccess: (saved) => {
+      draft.clear();
+      onSaved(saved);
+    },
   });
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -697,7 +716,7 @@ export function AutomationEditor({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setStep((v) => v - 1)}
+                    onClick={() => setStep(step - 1)}
                   >
                     上一步
                   </Button>
@@ -706,7 +725,7 @@ export function AutomationEditor({
                   <Button
                     type="button"
                     disabled={!canAdvance}
-                    onClick={() => setStep((v) => v + 1)}
+                    onClick={() => setStep(step + 1)}
                   >
                     下一步
                   </Button>
