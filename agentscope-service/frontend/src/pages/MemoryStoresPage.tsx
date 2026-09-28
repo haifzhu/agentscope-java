@@ -44,6 +44,7 @@ import { Input, Textarea } from '../components/ui/input';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Page, PageHeader } from '../components/Page';
 import { apiErrorMessage } from '../lib/apiError';
+import { childQueryKey, collectionQueryKey } from '../lib/resourceQueryKeys';
 import { cn } from '../lib/utils';
 
 type PendingTarget =
@@ -66,7 +67,7 @@ export default function MemoryStoresPage() {
   // 记忆库列表走 Query（D 阶段 MEDIUM-2）：竞态与缓存交给 queryKey 管理，
   // 取代原先手写 useState + useEffect 的加载链路。
   const storesQuery = useQuery({
-    queryKey: ['memory-stores'],
+    queryKey: collectionQueryKey('memoryStores'),
     queryFn: listMemoryStores,
     retry: false,
   });
@@ -75,7 +76,7 @@ export default function MemoryStoresPage() {
   // 记忆列表按记忆库 id 分键：快速切换记忆库时，晚到的响应只会写回它自己那一格，
   // 不会再覆盖当前选中的记忆库（此前手写 state 存在此竞态）。
   const memoriesQuery = useQuery({
-    queryKey: ['memory-stores', selected?.id, 'memories'],
+    queryKey: childQueryKey('memoryStores', selected?.id ?? '', 'memories'),
     queryFn: () => listMemories(selected!.id),
     enabled: !!selected,
     retry: false,
@@ -83,9 +84,9 @@ export default function MemoryStoresPage() {
   const memories = memoriesQuery.data ?? [];
 
   const invalidateStores = () =>
-    queryClient.invalidateQueries({ queryKey: ['memory-stores'] });
+    queryClient.invalidateQueries({ queryKey: collectionQueryKey('memoryStores') });
   const invalidateMemories = (storeId: string) =>
-    queryClient.invalidateQueries({ queryKey: ['memory-stores', storeId, 'memories'] });
+    queryClient.invalidateQueries({ queryKey: childQueryKey('memoryStores', storeId, 'memories') });
 
   const loading = storesQuery.isLoading;
   const queryError =
@@ -124,7 +125,7 @@ export default function MemoryStoresPage() {
       if (action === 'archive') await archiveMemoryStore(store.id);
       else await deleteMemoryStore(store.id);
       if (selected?.id === store.id) setSelected(null);
-      queryClient.removeQueries({ queryKey: ['memory-stores', store.id, 'memories'] });
+      queryClient.removeQueries({ queryKey: childQueryKey('memoryStores', store.id, 'memories') });
       await invalidateStores();
     } catch (e: unknown) {
       setErr(apiErrorMessage(e, action === 'archive' ? '归档失败' : '删除失败'));

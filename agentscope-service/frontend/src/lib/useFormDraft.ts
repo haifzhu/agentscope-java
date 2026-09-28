@@ -16,9 +16,67 @@
 
 import { useRef, useState } from 'react';
 
-type DraftStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+/** 只依赖 Storage 的最小接口，便于在无 DOM 的单测环境里注入假实现。 */
+export interface DraftStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
 
-function storage(): DraftStorage | null {
+export const DRAFT_PREFIX = 'form-draft:';
+
+const storageKeyOf = (key: string) => `${DRAFT_PREFIX}${key}`;
+
+export interface DraftReadResult<T> {
+  value: T;
+  restored: boolean;
+}
+
+/**
+ * 读取草稿（纯函数）。
+ *
+ * 草稿损坏（手工改过 / 结构随版本变化）时就地丢弃并回到初始值，
+ * 而不是让 JSON.parse 抛错把整个页面带崩——这正是「刷新即白屏」
+ * 一类事故的常见来源。
+ */
+export function readDraft<T>(
+  store: DraftStorage | null,
+  key: string,
+  resolveInitial: () => T,
+): DraftReadResult<T> {
+  if (!store || !key) return { value: resolveInitial(), restored: false };
+  const raw = store.getItem(storageKeyOf(key));
+  if (raw == null) return { value: resolveInitial(), restored: false };
+  try {
+    return { value: JSON.parse(raw) as T, restored: true };
+  } catch {
+    store.removeItem(storageKeyOf(key));
+    return { value: resolveInitial(), restored: false };
+  }
+}
+
+/** 写入草稿（纯函数）。存储不可用（配额 / 隐私模式）时静默降级。 */
+export function writeDraft<T>(store: DraftStorage | null, key: string, value: T): void {
+  if (!store || !key) return;
+  try {
+    store.setItem(storageKeyOf(key), JSON.stringify(value));
+  } catch {
+    // 存储写入失败不影响内存中的表单状态。
+  }
+}
+
+/** 清除草稿（纯函数）。 */
+export function clearDraft(store: DraftStorage | null, key: string): void {
+  if (!store || !key) return;
+  try {
+    store.removeItem(storageKeyOf(key));
+  } catch {
+    // 同上，忽略。
+  }
+}
+
+/** 取浏览器的 sessionStorage；不可用时返回 null 而不是抛错。 */
+export function browserDraftStorage(): DraftStorage | null {
   if (typeof window === 'undefined') return null;
   try {
     return window.sessionStorage;
@@ -47,59 +105,34 @@ export interface FormDraft<T> {
  * `key` 变化（切换到另一条记录 / 新建）时会重新读取对应草稿，
  * 避免把 A 的输入带进 B。存储不可用时静默降级为纯内存状态。
  */
-export function useFormDraft<T>(key: string, initial: T | (() => T)): FormDraft<T> {
+export function useFormDraft<T>(
+  key: string,
+  initial: T | (() => T),
+  store: DraftStorage | null = browserDraftStorage(),
+): FormDraft<T> {
   // initial 允许传惰性工厂：初始值计算（structuredClone 等）不应在每次渲染都跑。
   const resolveInitial = (): T =>
     typeof initial === 'function' ? (initial as () => T)() : initial;
 
-  const read = (targetKey: string): { value: T; restored: boolean } => {
-    const store = storage();
-    if (!store || !targetKey) return { value: resolveInitial(), restored: false };
-    const raw = store.getItem(`form-draft:${targetKey}`);
-    if (raw == null) return { value: resolveInitial(), restored: false };
-    try {
-      return { value: JSON.parse(raw) as T, restored: true };
-    } catch {
-      // 草稿损坏（手工改过 / 版本不兼容）时丢弃，回到初始值，不让页面白屏。
-      store.removeItem(`form-draft:${targetKey}`);
-      return { value: resolveInitial(), restored: false };
-    }
-  };
-
-  const [state, setState] = useState(() => read(key));
-
+  const [state, setState] = useState(() => readDraft(store, key, resolveInitial));
 
   // key 变化：重新读取。用「上一 key」比较而非依赖 value，避免把本地编辑覆盖回去。
   const loadedKeyRef = useRef(key);
   if (loadedKeyRef.current !== key) {
     loadedKeyRef.current = key;
-    setState(read(key));
+    setState(readDraft(store, key, resolveInitial));
   }
 
   const setValue = (next: T | ((prev: T) => T)) => {
     setState((prev) => {
       const value = typeof next === 'function' ? (next as (p: T) => T)(prev.value) : next;
-      const store = storage();
-      if (store && key) {
-        try {
-          store.setItem(`form-draft:${key}`, JSON.stringify(value));
-        } catch {
-          // 配额或隐私模式：保留内存状态即可。
-        }
-      }
+      writeDraft(store, key, value);
       return { value, restored: prev.restored };
     });
   };
 
   const clear = () => {
-    const store = storage();
-    if (store && key) {
-      try {
-        store.removeItem(`form-draft:${key}`);
-      } catch {
-        // 同上，忽略。
-      }
-    }
+    clearDraft(store, key);
     setState({ value: resolveInitial(), restored: false });
   };
 

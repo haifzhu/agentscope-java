@@ -46,6 +46,7 @@ import { Input } from '../components/ui/input';
 import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Page, PageHeader } from '../components/Page';
 import { apiErrorMessage } from '../lib/apiError';
+import { childQueryKey, collectionQueryKey } from '../lib/resourceQueryKeys';
 import { cn } from '../lib/utils';
 
 const selectClass =
@@ -84,10 +85,10 @@ export default function VaultsPage() {
 
   // D 阶段 MEDIUM-2：密钥库与凭据列表迁到 Query；凭据按密钥库 id 分键，
   // 快速切换密钥库时晚到的响应不会覆盖当前选中库。
-  const vaultsQuery = useQuery({ queryKey: ['vaults'], queryFn: listVaults, retry: false });
+  const vaultsQuery = useQuery({ queryKey: collectionQueryKey('vaults'), queryFn: listVaults, retry: false });
   const vaults = vaultsQuery.data ?? [];
   const credentialsQuery = useQuery({
-    queryKey: ['vaults', selected?.id, 'credentials'],
+    queryKey: childQueryKey('vaults', selected?.id ?? '', 'credentials'),
     queryFn: () => listCredentials(selected!.id),
     enabled: !!selected,
     retry: false,
@@ -100,9 +101,9 @@ export default function VaultsPage() {
       ? apiErrorMessage(credentialsQuery.error, '凭据加载失败')
       : err;
 
-  const refreshVaults = () => queryClient.invalidateQueries({ queryKey: ['vaults'] });
+  const refreshVaults = () => queryClient.invalidateQueries({ queryKey: collectionQueryKey('vaults') });
   const refreshCredentials = (vaultId: string) =>
-    queryClient.invalidateQueries({ queryKey: ['vaults', vaultId, 'credentials'] });
+    queryClient.invalidateQueries({ queryKey: childQueryKey('vaults', vaultId, 'credentials') });
 
   async function handleCreateVault(e: React.FormEvent) {
     e.preventDefault();
@@ -156,7 +157,7 @@ export default function VaultsPage() {
       if (kind === 'archive') await archiveVault(vault.id);
       else await deleteVault(vault.id);
       if (selected?.id === vault.id) setSelected(null);
-      queryClient.removeQueries({ queryKey: ['vaults', vault.id, 'credentials'] });
+      queryClient.removeQueries({ queryKey: childQueryKey('vaults', vault.id, 'credentials') });
       await refreshVaults();
     } catch (e: unknown) {
       setErr(apiErrorMessage(e, kind === 'archive' ? '归档失败' : '删除失败'));

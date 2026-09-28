@@ -25,8 +25,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  WIZARD_STEPS,
   automationError,
   buildAutomationWrite,
+  canAdvanceFromStep,
   defaultTrigger,
   executionForForm,
 } from "./form";
@@ -36,13 +38,6 @@ const selectClass =
   "h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm";
 
 /** 四步向导（PRD 5.12）：基本信息 → 执行者与产出 → 触发器 → 高级与确认。 */
-const WIZARD_STEPS = [
-  { title: "基本信息", hint: "名称与运行手册" },
-  { title: "执行者与产出", hint: "交给谁、结果去哪" },
-  { title: "触发器", hint: "定时或 Webhook" },
-  { title: "高级与确认", hint: "并发、超时与启用" },
-] as const;
-
 function StepIndicator({ step }: { step: number }) {
   return (
     <ol className="flex flex-wrap items-center gap-2 border-b border-border px-6 py-3">
@@ -336,8 +331,7 @@ export function AutomationEditor({
   };
   const stepOneValid = !!name.trim() && !!execution.runbook.trim();
   const stepTwoValid = !!execution.assigneeRef;
-  const canAdvance =
-    step === 0 ? stepOneValid : step === 1 ? stepTwoValid : true;
+  const canAdvance = canAdvanceFromStep(step, { name, execution });
   const assigneeSummary =
     execution.assigneeType === "agent"
       ? `智能体 ${execution.assigneeRef || "（未选择）"}`

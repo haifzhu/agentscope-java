@@ -44,6 +44,7 @@ import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Input, Textarea } from '../components/ui/input';
 import { Page, PageHeader } from '../components/Page';
 import { apiErrorMessage } from '../lib/apiError';
+import { collectionQueryKey } from '../lib/resourceQueryKeys';
 
 const selectClass =
   'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
@@ -71,7 +72,7 @@ export default function EnvironmentsHubPage() {
 
   // D 阶段 MEDIUM-2：列表与 Hands 状态迁到 Query，取代手写 refresh + useEffect。
   const envQuery = useQuery({
-    queryKey: ['environments'],
+    queryKey: collectionQueryKey('environments'),
     queryFn: listEnvironments,
     retry: false,
   });
@@ -85,7 +86,7 @@ export default function EnvironmentsHubPage() {
   const loading = envQuery.isLoading;
   const errorText = envQuery.error ? apiErrorMessage(envQuery.error, '加载失败') : err;
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['environments'] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: collectionQueryKey('environments') });
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

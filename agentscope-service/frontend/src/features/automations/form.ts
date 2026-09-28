@@ -126,3 +126,29 @@ export function runLabel(status: string, waitReason?: string) {
     )[status] || status
   );
 }
+
+/** 向导步骤定义（PRD 5.12）；四步顺序是 UI 与校验共享的契约。 */
+export const WIZARD_STEPS = [
+  { title: "基本信息", hint: "名称与运行手册" },
+  { title: "执行者与产出", hint: "交给谁、结果去哪" },
+  { title: "触发器", hint: "定时或 Webhook" },
+  { title: "高级与确认", hint: "并发、超时与启用" },
+] as const;
+
+export interface WizardDraftShape {
+  name: string;
+  execution: Pick<AutomationExecution, "runbook" | "assigneeRef">;
+}
+
+/**
+ * 每一步能否前进。
+ *
+ * 第 1 步要求名称与非空运行手册；第 2 步要求已选执行者；
+ * 触发器与高级步骤没有必填项，可直接确认。
+ * 抽成纯函数是为了让向导规则可单测，不必渲染整个对话框。
+ */
+export function canAdvanceFromStep(step: number, draft: WizardDraftShape): boolean {
+  if (step === 0) return !!draft.name.trim() && !!draft.execution.runbook.trim();
+  if (step === 1) return !!draft.execution.assigneeRef;
+  return true;
+}

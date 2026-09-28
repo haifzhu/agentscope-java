@@ -58,6 +58,7 @@ import { Page, PageHeader } from '../components/Page';
 import { cn } from '../lib/utils';
 import { apiErrorMessage } from '../lib/apiError';
 import { assertHttpUrl } from '../lib/urls';
+import { childQueryKey, detailQueryKey } from '../lib/resourceQueryKeys';
 
 type Tab = 'agentsmd' | 'skills' | 'tools' | 'subagents';
 
@@ -113,19 +114,19 @@ export default function WorkspaceDetailPage() {
   // 此前 useEffect 无取消逻辑，切换工作空间时旧 id 的迟到响应会覆盖新页面的数据；
   // 按 queryKey 分键后，迟到的响应只会写回它自己那一格。
   const wsQuery = useQuery({
-    queryKey: ['workspace', id],
+    queryKey: detailQueryKey('workspaces', id),
     queryFn: () => getWorkspace(id),
     enabled: !!id,
     retry: false,
   });
   const skillsQuery = useQuery({
-    queryKey: ['workspace', id, 'skills'],
+    queryKey: childQueryKey('workspaces', id, 'skills'),
     queryFn: () => listWorkspaceResourceSkills(id),
     enabled: !!id,
     retry: false,
   });
   const subagentsQuery = useQuery({
-    queryKey: ['workspace', id, 'subagents'],
+    queryKey: childQueryKey('workspaces', id, 'subagents'),
     queryFn: () => listWorkspaceResourceSubagents(id),
     enabled: !!id,
     retry: false,
@@ -135,11 +136,11 @@ export default function WorkspaceDetailPage() {
   const subagents: SubagentInfo[] = subagentsQuery.data ?? [];
 
   const reloadMeta = () =>
-    queryClient.invalidateQueries({ queryKey: ['workspace', id] });
+    queryClient.invalidateQueries({ queryKey: detailQueryKey('workspaces', id) });
   const reloadSkills = () =>
-    queryClient.invalidateQueries({ queryKey: ['workspace', id, 'skills'] });
+    queryClient.invalidateQueries({ queryKey: childQueryKey('workspaces', id, 'skills') });
   const reloadSubagents = () =>
-    queryClient.invalidateQueries({ queryKey: ['workspace', id, 'subagents'] });
+    queryClient.invalidateQueries({ queryKey: childQueryKey('workspaces', id, 'subagents') });
 
   useEffect(() => {
     if (tabParam === 'marketplace') {
