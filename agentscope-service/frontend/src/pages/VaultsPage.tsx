@@ -15,11 +15,11 @@
  */
 
 import { ResourceConsumers } from '../components/ResourceConsumers';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, KeyRound, Lock, Plus, Trash2 } from 'lucide-react';
 import {
   Vault,
-  VaultCredential,
   addCredential,
   archiveVault,
   createVault,
@@ -43,12 +43,15 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Page, PageHeader } from '../components/Page';
+import { apiErrorMessage } from '../lib/apiError';
 import { cn } from '../lib/utils';
 
 const selectClass =
   'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
 
+/** 凭据类型的中文标签：下拉与列表共用一份，避免两处各写一套。 */
 const CRED_TYPE_LABEL: Record<string, string> = {
   static_bearer: 'MCP Bearer 令牌',
   mcp_oauth: 'MCP OAuth 令牌（可选刷新）',
@@ -57,10 +60,8 @@ const CRED_TYPE_LABEL: Record<string, string> = {
 };
 
 export default function VaultsPage() {
-  const [vaults, setVaults] = useState<Vault[]>([]);
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Vault | null>(null);
-  const [credentials, setCredentials] = useState<VaultCredential[]>([]);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [creatingVault, setCreatingVault] = useState(false);
   const [addingCred, setAddingCred] = useState(false);
@@ -70,32 +71,38 @@ export default function VaultsPage() {
   const [credTarget, setCredTarget] = useState('');
   const [credSecret, setCredSecret] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<
+    { kind: 'archiveVault' | 'deleteVault'; vault: Vault }
+    | { kind: 'deleteCredential'; vault: Vault; credentialId: string }
+  >();
+  const [renaming, setRenaming] = useState<Vault | null>(null);
+  const [renameText, setRenameText] = useState('');
+  // 密钥轮换改为 Dialog 表单（安全 LOW-1）：原生 prompt 无法遮蔽输入，
+  // 也无法做「只写不读」的可见提示。
+  const [rotating, setRotating] = useState<{ vault: Vault; credentialId: string } | null>(null);
+  const [rotateSecret, setRotateSecret] = useState('');
 
-  async function refreshVaults() {
-    setLoading(true);
-    setErr(null);
-    try {
-      setVaults(await listVaults());
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // D 阶段 MEDIUM-2：密钥库与凭据列表迁到 Query；凭据按密钥库 id 分键，
+  // 快速切换密钥库时晚到的响应不会覆盖当前选中库。
+  const vaultsQuery = useQuery({ queryKey: ['vaults'], queryFn: listVaults, retry: false });
+  const vaults = vaultsQuery.data ?? [];
+  const credentialsQuery = useQuery({
+    queryKey: ['vaults', selected?.id, 'credentials'],
+    queryFn: () => listCredentials(selected!.id),
+    enabled: !!selected,
+    retry: false,
+  });
+  const credentials = credentialsQuery.data ?? [];
+  const loading = vaultsQuery.isLoading;
+  const errorText = vaultsQuery.error
+    ? apiErrorMessage(vaultsQuery.error, '加载失败')
+    : selected && credentialsQuery.error
+      ? apiErrorMessage(credentialsQuery.error, '凭据加载失败')
+      : err;
 
-  async function loadCredentials(vault: Vault) {
-    setSelected(vault);
-    setErr(null);
-    try {
-      setCredentials(await listCredentials(vault.id));
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '凭据加载失败');
-    }
-  }
-
-  useEffect(() => {
-    void refreshVaults();
-  }, []);
+  const refreshVaults = () => queryClient.invalidateQueries({ queryKey: ['vaults'] });
+  const refreshCredentials = (vaultId: string) =>
+    queryClient.invalidateQueries({ queryKey: ['vaults', vaultId, 'credentials'] });
 
   async function handleCreateVault(e: React.FormEvent) {
     e.preventDefault();
@@ -106,60 +113,53 @@ export default function VaultsPage() {
       setCreatingVault(false);
       setVaultName('');
       await refreshVaults();
-      await loadCredentials(created);
+      setSelected(created);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '创建失败');
+      setErr(apiErrorMessage(e, '创建失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleRenameVault(v: Vault) {
-    const next = window.prompt('重命名密钥库', v.displayName);
-    if (next == null || !next.trim() || next.trim() === v.displayName) return;
-    setBusyId(v.id);
+  function openRename(v: Vault) {
+    setRenaming(v);
+    setRenameText(v.displayName);
+    setErr(null);
+  }
+
+  async function handleRenameVault(e: React.FormEvent) {
+    e.preventDefault();
+    if (!renaming) return;
+    const next = renameText.trim();
+    if (!next || next === renaming.displayName) {
+      setRenaming(null);
+      return;
+    }
+    setBusyId(renaming.id);
+    setErr(null);
     try {
-      await updateVault(v.id, { displayName: next.trim() });
+      await updateVault(renaming.id, { displayName: next });
       await refreshVaults();
-      if (selected?.id === v.id) {
-        setSelected({ ...v, displayName: next.trim() });
-      }
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '重命名失败');
+      if (selected?.id === renaming.id) setSelected({ ...renaming, displayName: next });
+      setRenaming(null);
+    } catch (ex: unknown) {
+      setErr(apiErrorMessage(ex, '重命名失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleArchiveVault(id: string) {
-    if (!confirm('确认归档该密钥库？归档后不再向会话注入凭据。')) return;
-    setBusyId(id);
+  async function runVaultAction(vault: Vault, kind: 'archive' | 'delete') {
+    setBusyId(vault.id);
+    setErr(null);
     try {
-      await archiveVault(id);
-      if (selected?.id === id) {
-        setSelected(null);
-        setCredentials([]);
-      }
+      if (kind === 'archive') await archiveVault(vault.id);
+      else await deleteVault(vault.id);
+      if (selected?.id === vault.id) setSelected(null);
+      queryClient.removeQueries({ queryKey: ['vaults', vault.id, 'credentials'] });
       await refreshVaults();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '归档失败');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDeleteVault(id: string) {
-    if (!confirm('确认删除该密钥库及其全部凭据？此操作不可恢复。')) return;
-    setBusyId(id);
-    try {
-      await deleteVault(id);
-      if (selected?.id === id) {
-        setSelected(null);
-        setCredentials([]);
-      }
-      await refreshVaults();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '删除失败');
+      setErr(apiErrorMessage(e, kind === 'archive' ? '归档失败' : '删除失败'));
     } finally {
       setBusyId(null);
     }
@@ -175,22 +175,30 @@ export default function VaultsPage() {
         .join('、');
       window.alert(result.ok ? `有效（${detail}）` : `无效（${detail}）`);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '校验失败');
+      setErr(apiErrorMessage(e, '校验失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleRotateSecret(credentialId: string) {
-    if (!selected) return;
-    const secret = window.prompt('输入新的密钥值（只写不读，保存后不再显示）');
-    if (secret == null || !secret) return;
-    setBusyId(credentialId);
+  function openRotate(vault: Vault, credentialId: string) {
+    setRotating({ vault, credentialId });
+    setRotateSecret('');
+    setErr(null);
+  }
+
+  async function handleRotateSecret(e: React.FormEvent) {
+    e.preventDefault();
+    if (!rotating || !rotateSecret) return;
+    setBusyId(rotating.credentialId);
+    setErr(null);
     try {
-      await updateCredential(selected.id, credentialId, { secret });
-      await loadCredentials(selected);
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '更新失败');
+      await updateCredential(rotating.vault.id, rotating.credentialId, { secret: rotateSecret });
+      setRotating(null);
+      setRotateSecret('');
+      await refreshCredentials(rotating.vault.id);
+    } catch (ex: unknown) {
+      setErr(apiErrorMessage(ex, '更新失败'));
     } finally {
       setBusyId(null);
     }
@@ -219,22 +227,22 @@ export default function VaultsPage() {
       setCredLabel('');
       setCredTarget('');
       setCredSecret('');
-      await loadCredentials(selected);
+      await refreshCredentials(selected.id);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '添加失败');
+      setErr(apiErrorMessage(e, '添加失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleDeleteCredential(credentialId: string) {
-    if (!selected || !confirm('确认删除该凭据？')) return;
+  async function runCredentialDelete(vault: Vault, credentialId: string) {
     setBusyId(credentialId);
+    setErr(null);
     try {
-      await deleteCredential(selected.id, credentialId);
-      await loadCredentials(selected);
+      await deleteCredential(vault.id, credentialId);
+      await refreshCredentials(vault.id);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '删除失败');
+      setErr(apiErrorMessage(e, '删除失败'));
     } finally {
       setBusyId(null);
     }
@@ -256,9 +264,9 @@ export default function VaultsPage() {
         密钥值为只写——添加后仅显示元数据（类型、标签、目标）。
       </div>
       <AsyncState
-        status={loading ? 'loading' : err ? 'error' : vaults.length ? 'ready' : 'empty'}
+        status={loading ? 'loading' : errorText ? 'error' : vaults.length ? 'ready' : 'empty'}
         resource="密钥库"
-        errorDescription={err ?? undefined}
+        errorDescription={errorText ?? undefined}
         onRetry={() => void refreshVaults()}
         emptyDescription="尚未创建密钥库。"
       >
@@ -271,7 +279,7 @@ export default function VaultsPage() {
                   'cursor-pointer space-y-2 p-4',
                   selected?.id === v.id && 'border-primary bg-primary-soft',
                 )}
-                onClick={() => void loadCredentials(v)}
+                onClick={() => setSelected(v)}
               >
                 <div className="flex items-center gap-2">
                   <KeyRound className="h-4 w-4 text-text-3" />
@@ -285,7 +293,7 @@ export default function VaultsPage() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void handleRenameVault(v);
+                      openRename(v);
                     }}
                   >
                     重命名
@@ -296,7 +304,7 @@ export default function VaultsPage() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void handleArchiveVault(v.id);
+                      setPending({ kind: 'archiveVault', vault: v });
                     }}
                   >
                     <Archive className="h-3.5 w-3.5" /> 归档
@@ -308,7 +316,7 @@ export default function VaultsPage() {
                     className="text-danger-text"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void handleDeleteVault(v.id);
+                      setPending({ kind: 'deleteVault', vault: v });
                     }}
                   >
                     <Trash2 className="h-3.5 w-3.5" /> 删除
@@ -347,10 +355,10 @@ export default function VaultsPage() {
                           <Button type="button" variant="outline" size="sm" onClick={() => void handleValidateCredential(c.id)}>
                             校验
                           </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={() => void handleRotateSecret(c.id)}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => selected && openRotate(selected, c.id)}>
                             轮换
                           </Button>
-                          <Button type="button" variant="outline" size="sm" className="text-danger-text" onClick={() => void handleDeleteCredential(c.id)}>
+                          <Button type="button" variant="outline" size="sm" className="text-danger-text" onClick={() => selected && setPending({ kind: 'deleteCredential', vault: selected, credentialId: c.id })}>
                             <Trash2 className="h-3.5 w-3.5" /> 删除
                           </Button>
                         </td>
@@ -407,10 +415,9 @@ export default function VaultsPage() {
               <label className="block space-y-2 text-sm font-medium">
                 类型
                 <select className={selectClass} value={credType} onChange={(e) => setCredType(e.target.value)}>
-                  <option value="static_bearer">MCP Bearer 令牌</option>
-                  <option value="mcp_oauth">MCP OAuth 令牌（可选刷新）</option>
-                  <option value="environment_variable">显式环境变量占位</option>
-                  <option value="api_key">通用密钥（仅存储）</option>
+                  {Object.entries(CRED_TYPE_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
               </label>
               <label className="block space-y-2 text-sm font-medium">
@@ -451,6 +458,94 @@ export default function VaultsPage() {
           </DialogBody>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(undefined); }}
+        title={
+          pending?.kind === 'deleteVault'
+            ? `删除密钥库「${pending.vault.displayName}」及其全部凭据？`
+            : pending?.kind === 'archiveVault'
+              ? `归档密钥库「${pending.vault.displayName}」？`
+              : pending?.kind === 'deleteCredential'
+                ? '删除该凭据？'
+                : ''
+        }
+        description={
+          pending?.kind === 'deleteVault'
+            ? '该密钥库及其全部凭据将被永久删除，此操作不可恢复。'
+            : pending?.kind === 'archiveVault'
+              ? '归档后不再向会话注入凭据，既有内容保留。'
+              : pending?.kind === 'deleteCredential'
+                ? '删除后使用该凭据的智能体将无法再读取密钥。'
+                : undefined
+        }
+        dangerLevel={pending?.kind === 'archiveVault' ? 'warning' : 'danger'}
+        confirmLabel={pending?.kind === 'archiveVault' ? '归档' : '删除'}
+        cancelLabel="取消"
+        busy={
+          !!pending && (pending.kind === 'deleteCredential'
+            ? busyId === pending.credentialId
+            : busyId === pending.vault.id)
+        }
+        onConfirm={() => {
+          if (!pending) return;
+          const target = pending;
+          setPending(undefined);
+          if (target.kind === 'deleteCredential') void runCredentialDelete(target.vault, target.credentialId);
+          else void runVaultAction(target.vault, target.kind === 'archiveVault' ? 'archive' : 'delete');
+        }}
+      />
+
+      <Dialog open={!!renaming} onOpenChange={(open) => !open && setRenaming(null)}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>重命名密钥库</DialogTitle>
+            <DialogDescription>仅修改展示名称，已有凭据与授权不变。</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <form onSubmit={handleRenameVault} className="space-y-4">
+              <label className="block space-y-2 text-sm font-medium">
+                展示名称
+                <Input value={renameText} onChange={(e) => setRenameText(e.target.value)} autoFocus />
+              </label>
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <Button type="button" variant="ghost" onClick={() => setRenaming(null)}>取消</Button>
+                <Button type="submit" disabled={busyId === renaming?.id || !renameText.trim()}>保存</Button>
+              </div>
+            </form>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rotating} onOpenChange={(open) => !open && setRotating(null)}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>轮换密钥</DialogTitle>
+            <DialogDescription>
+              新值保存后立即生效，旧值作废。密钥只写不读，保存后不再回显。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <form onSubmit={handleRotateSecret} className="space-y-4">
+              <label className="block space-y-2 text-sm font-medium">
+                新的密钥值
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={rotateSecret}
+                  onChange={(e) => setRotateSecret(e.target.value)}
+                  autoFocus
+                />
+              </label>
+              <div className="flex justify-end gap-2 border-t border-border pt-4">
+                <Button type="button" variant="ghost" onClick={() => setRotating(null)}>取消</Button>
+                <Button type="submit" disabled={busyId === rotating?.credentialId || !rotateSecret}>轮换</Button>
+              </div>
+            </form>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
     </Page>
   );
 }

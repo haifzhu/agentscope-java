@@ -25,12 +25,15 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { apiErrorMessage } from '../lib/apiError';
 
 export default function WorkspacesHubPage() {
   const navigate = useNavigate();
   const scope = useControlPlaneScope();
   const [items, setItems] = useState<WorkspaceSummary[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ id: string; name: string } | null>(null);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,15 +92,7 @@ export default function WorkspacesHubPage() {
                   size="icon"
                   className="text-text-3 hover:text-danger-text"
                   aria-label={`删除 ${workspace.name}`}
-                  onClick={async () => {
-                    if (!confirm(`确认删除工作空间 ${workspace.name}？`)) return;
-                    try {
-                      await deleteWorkspace(workspace.id);
-                      await reload();
-                    } catch (cause: unknown) {
-                      setErr(cause instanceof Error ? cause.message : '删除失败');
-                    }
-                  }}
+                  onClick={() => setPending({ id: workspace.id, name: workspace.name })}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -119,6 +114,26 @@ export default function WorkspacesHubPage() {
           </DialogBody>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        title={pending ? `删除工作空间「${pending.name}」？` : ''}
+        description="工作空间及其技能、子智能体定义都会被移除，此操作不可恢复。"
+        dangerLevel="danger"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        onConfirm={async () => {
+          const target = pending;
+          setPending(null);
+          if (!target) return;
+          try {
+            await deleteWorkspace(target.id);
+            await reload();
+          } catch (cause: unknown) {
+            setErr(apiErrorMessage(cause, '删除失败'));
+          }
+        }}
+      />
     </Page>
   );
 }

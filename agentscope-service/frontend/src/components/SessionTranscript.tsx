@@ -28,6 +28,7 @@ import { MemoryStore, listMemoryStores } from '../api/memoryStores';
 import { Vault, listVaults } from '../api/vaults';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiErrorMessage } from '@/lib/apiError';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 const S: Record<string, React.CSSProperties> = {
   root: { padding: '28px 32px', minWidth: 0, maxWidth: 1100 },
@@ -105,6 +106,7 @@ export default function SessionTranscript({
   const [vaultIds, setVaultIds] = useState<string[]>([]);
   const [memoryStoreIds, setMemoryStoreIds] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState<'archive' | 'delete' | null>(null);
   const [system, setSystem] = useState('');
   const [model, setModel] = useState('');
   const [maxIters, setMaxIters] = useState('');
@@ -145,7 +147,6 @@ export default function SessionTranscript({
   }, [agentId, sessionId]);
 
   async function handleArchiveManaged() {
-    if (!confirm('Archive this managed session?')) return;
     try {
       await archiveManagedSession(sessionId);
       await reload();
@@ -164,7 +165,6 @@ export default function SessionTranscript({
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this session entirely?')) return;
     try {
       await deleteManagedSession(sessionId);
       if (onDeleted) onDeleted();
@@ -236,9 +236,9 @@ export default function SessionTranscript({
           {archived ? (
             <button type="button" style={S.btn} onClick={handleRestoreManaged}>Restore</button>
           ) : (
-            <button type="button" style={S.btn} onClick={handleArchiveManaged}>Archive</button>
+            <button type="button" style={S.btn} onClick={() => setPending('archive')}>归档</button>
           )}
-          <button type="button" style={{ ...S.btn, ...S.danger }} onClick={handleDelete}>Delete</button>
+          <button type="button" style={{ ...S.btn, ...S.danger }} onClick={() => setPending('delete')}>删除</button>
         </div>
       )}
       {embedded && (
@@ -247,9 +247,9 @@ export default function SessionTranscript({
           {archived ? (
             <button type="button" style={S.btn} onClick={handleRestoreManaged}>Restore</button>
           ) : (
-            <button type="button" style={S.btn} onClick={handleArchiveManaged}>Archive</button>
+            <button type="button" style={S.btn} onClick={() => setPending('archive')}>归档</button>
           )}
-          <button type="button" style={{ ...S.btn, ...S.danger }} onClick={handleDelete}>Delete</button>
+          <button type="button" style={{ ...S.btn, ...S.danger }} onClick={() => setPending('delete')}>删除</button>
         </div>
       )}
       <div style={S.meta}>
@@ -362,6 +362,24 @@ export default function SessionTranscript({
           )}
         </form>
       </div>
+
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        title={pending === 'delete' ? '彻底删除该会话？' : '归档该会话？'}
+        description={pending === 'delete'
+          ? '删除后该会话及其消息记录不可恢复。'
+          : '归档后不再出现在活跃列表，可随时恢复。'}
+        dangerLevel={pending === 'delete' ? 'danger' : 'warning'}
+        confirmLabel={pending === 'delete' ? '删除' : '归档'}
+        cancelLabel="取消"
+        onConfirm={() => {
+          const action = pending;
+          setPending(null);
+          if (action === 'delete') void handleDelete();
+          else if (action === 'archive') void handleArchiveManaged();
+        }}
+      />
 
     </div>
   );

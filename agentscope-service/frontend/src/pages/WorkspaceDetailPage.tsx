@@ -16,6 +16,7 @@
 
 import WorkspacePublications from '../components/WorkspacePublications';
 import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2 } from 'lucide-react';
 import { useControlPlaneScope } from '../app/ScopeContext';
@@ -55,6 +56,8 @@ import { Card } from '../components/ui/card';
 import { Input, Textarea } from '../components/ui/input';
 import { Page, PageHeader } from '../components/Page';
 import { cn } from '../lib/utils';
+import { apiErrorMessage } from '../lib/apiError';
+import { assertHttpUrl } from '../lib/urls';
 
 type Tab = 'agentsmd' | 'skills' | 'tools' | 'subagents';
 
@@ -73,7 +76,7 @@ export default function WorkspaceDetailPage() {
   const navigate = useNavigate();
   const scope = useControlPlaneScope();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [ws, setWs] = useState<WorkspaceSummary | null>(null);
+  const queryClient = useQueryClient();
   const tabParam = searchParams.get('tab');
   const initialTab: Tab =
     tabParam === 'skills' ||
@@ -99,27 +102,44 @@ export default function WorkspaceDetailPage() {
   const [mktName, setMktName] = useState('');
   const [nacosAddr, setNacosAddr] = useState('');
   const [nacosSkills, setNacosSkills] = useState('');
-  const [skills, setSkills] = useState<WorkspaceSkillInfo[]>([]);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [skillMd, setSkillMd] = useState('');
   const [newSkillName, setNewSkillName] = useState('');
-  const [subagents, setSubagents] = useState<SubagentInfo[]>([]);
   const [saName, setSaName] = useState('');
   const [saDesc, setSaDesc] = useState('');
   const [saBody, setSaBody] = useState('');
 
-  async function reloadMeta() {
-    const w = await getWorkspace(id);
-    setWs(w);
-  }
+  // D 阶段 MEDIUM-2：工作空间元数据/技能/子智能体迁到 Query，id 进 queryKey。
+  // 此前 useEffect 无取消逻辑，切换工作空间时旧 id 的迟到响应会覆盖新页面的数据；
+  // 按 queryKey 分键后，迟到的响应只会写回它自己那一格。
+  const wsQuery = useQuery({
+    queryKey: ['workspace', id],
+    queryFn: () => getWorkspace(id),
+    enabled: !!id,
+    retry: false,
+  });
+  const skillsQuery = useQuery({
+    queryKey: ['workspace', id, 'skills'],
+    queryFn: () => listWorkspaceResourceSkills(id),
+    enabled: !!id,
+    retry: false,
+  });
+  const subagentsQuery = useQuery({
+    queryKey: ['workspace', id, 'subagents'],
+    queryFn: () => listWorkspaceResourceSubagents(id),
+    enabled: !!id,
+    retry: false,
+  });
+  const ws: WorkspaceSummary | null = wsQuery.data ?? null;
+  const skills: WorkspaceSkillInfo[] = skillsQuery.data ?? [];
+  const subagents: SubagentInfo[] = subagentsQuery.data ?? [];
 
-  async function reloadSkills() {
-    setSkills(await listWorkspaceResourceSkills(id));
-  }
-
-  async function reloadSubagents() {
-    setSubagents(await listWorkspaceResourceSubagents(id));
-  }
+  const reloadMeta = () =>
+    queryClient.invalidateQueries({ queryKey: ['workspace', id] });
+  const reloadSkills = () =>
+    queryClient.invalidateQueries({ queryKey: ['workspace', id, 'skills'] });
+  const reloadSubagents = () =>
+    queryClient.invalidateQueries({ queryKey: ['workspace', id, 'subagents'] });
 
   useEffect(() => {
     if (tabParam === 'marketplace') {
@@ -140,7 +160,6 @@ export default function WorkspaceDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    reloadMeta().catch(e => setErr(e.message));
     readWorkspaceFile(id, 'AGENTS.md')
       .then(f => setAgentsMd(f.content))
       .catch(() => setAgentsMd(''));
@@ -153,9 +172,12 @@ export default function WorkspaceDetailPage() {
     fetchBuiltinToolCatalog().then(setCatalog).catch(() => undefined);
     fetchMcpCatalog().then(setMcpCatalog).catch(() => undefined);
     listMarketplaces().then(setMarkets).catch(() => undefined);
-    reloadSkills().catch(() => undefined);
-    reloadSubagents().catch(() => undefined);
   }, [id]);
+
+  // 元数据加载失败时给出页面级错误（Query 的 error 不写回本地 err state）。
+  useEffect(() => {
+    if (wsQuery.error) setErr(apiErrorMessage(wsQuery.error, '工作空间加载失败'));
+  }, [wsQuery.error]);
 
   async function saveAgentsMd() {
     setSaving(true);
@@ -164,7 +186,7 @@ export default function WorkspaceDetailPage() {
       await reloadMeta();
       setErr(null);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '保存失败');
+      setErr(apiErrorMessage(e, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -562,17 +584,20 @@ export default function WorkspaceDetailPage() {
               <Button
                 onClick={async () => {
                   try {
+                    // 安全 LOW-2：git 远程地址限 http(s)，file:/ssh:/git: 等协议
+                    // 不再交给服务端去解释。
+                    const remoteUrl = assertHttpUrl(gitUrl, 'git 远程地址');
                     await createMarketplace({
                       name: mktName || 'Git skills',
                       type: 'git',
-                      config: { remoteUrl: gitUrl, branch: 'main', skillsRoot: 'skills' },
+                      config: { remoteUrl, branch: 'main', skillsRoot: 'skills' },
                     });
                     setMarkets(await listMarketplaces());
                     setGitUrl('');
                     setMktName('');
                     setErr(null);
                   } catch (e: unknown) {
-                    setErr(e instanceof Error ? e.message : '操作失败');
+                    setErr(apiErrorMessage(e, '操作失败'));
                   }
                 }}
               >
@@ -614,7 +639,7 @@ export default function WorkspaceDetailPage() {
                     setNacosSkills('');
                     setErr(null);
                   } catch (e: unknown) {
-                    setErr(e instanceof Error ? e.message : '操作失败');
+                    setErr(apiErrorMessage(e, '操作失败'));
                   }
                 }}
               >

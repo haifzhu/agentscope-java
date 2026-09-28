@@ -50,6 +50,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Page, PageHeader } from '@/components/Page';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const DM_SCOPES = ['MAIN', 'PER_PEER'];
 
@@ -119,6 +121,10 @@ export default function ChannelDetailPage() {
   const [detail, setDetail] = useState<ChannelDetail | null>(null);
   const [types, setTypes] = useState<ChannelTypeSpec[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState<
+    { kind: 'channel' } | { kind: 'binding'; index: number }
+  >();
+  const [pendingType, setPendingType] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
   const [type, setType] = useState('');
@@ -158,7 +164,11 @@ export default function ChannelDetailPage() {
 
   function onTypeChange(next: string) {
     if (next === type) return;
-    if (!confirm('切换平台会清空凭据表单，确认继续？')) return;
+    // 切平台会丢弃已填凭据，走三档分级的确认框而非原生 confirm。
+    setPendingType(next);
+  }
+
+  function applyTypeChange(next: string) {
     setType(next);
     const spec = types.find(t => t.type === next);
     setCreds(credentialsFromProperties(spec, undefined));
@@ -201,13 +211,12 @@ export default function ChannelDetailPage() {
     }
   }
 
-  async function handleDeleteChannel() {
-    if (!confirm(`确认删除渠道「${channelId}」？其条目与全部绑定都会被移除。`)) return;
+  async function runDeleteChannel() {
     try {
       await deleteChannel(channelId);
       navigate('/agent-center/entrypoints');
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(apiErrorMessage(e, '删除渠道失败'));
     }
   }
 
@@ -234,8 +243,7 @@ export default function ChannelDetailPage() {
     await persist({ bindings: next });
   }
 
-  async function deleteBindingAt(i: number) {
-    if (!confirm(`确认删除规则 #${i}（${describe(bindings[i])}）？`)) return;
+  async function runDeleteBinding(i: number) {
     const next = bindings.filter((_, idx) => idx !== i);
     setBindings(next);
     await persist({ bindings: next });
@@ -279,7 +287,7 @@ export default function ChannelDetailPage() {
               <Button variant="outline" onClick={() => void toggleDisabled()}>
                 {detail.disabled ? '启用' : '停用'}
               </Button>
-              <Button variant="outline" className="text-danger-text" onClick={() => void handleDeleteChannel()}>
+              <Button variant="outline" className="text-danger-text" onClick={() => setPending({ kind: 'channel' })}>
                 <Trash2 className="h-3.5 w-3.5" /> 删除
               </Button>
             </div>
@@ -351,7 +359,7 @@ export default function ChannelDetailPage() {
                 <span className="flex-1 break-all font-mono text-xs text-text-2">{describe(b)}</span>
                 {b.sessionScope && <Badge>{b.sessionScope}</Badge>}
                 <Button size="sm" variant="outline" onClick={() => startEditBinding(i)}>编辑</Button>
-                <Button size="sm" variant="outline" className="text-danger-text" onClick={() => void deleteBindingAt(i)}>
+                <Button size="sm" variant="outline" className="text-danger-text" onClick={() => setPending({ kind: 'binding', index: i })}>
                   <Trash2 className="h-3.5 w-3.5" /> 删除
                 </Button>
               </div>
@@ -369,6 +377,50 @@ export default function ChannelDetailPage() {
           onSave={saveBinding}
         />
       )}
+
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(undefined); }}
+        title={
+          pending?.kind === 'channel'
+            ? `删除渠道「${channelId}」？`
+            : pending?.kind === 'binding'
+              ? `删除规则 #${pending.index}（${describe(bindings[pending.index])}）？`
+              : ''
+        }
+        description={
+          pending?.kind === 'channel'
+            ? '该渠道的条目与全部绑定都会被移除，此操作不可恢复。'
+            : pending?.kind === 'binding'
+              ? '删除后该规则不再生效，消息将不再路由到对应智能体。'
+              : undefined
+        }
+        dangerLevel="danger"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        onConfirm={() => {
+          if (!pending) return;
+          const target = pending;
+          setPending(undefined);
+          if (target.kind === 'channel') void runDeleteChannel();
+          else void runDeleteBinding(target.index);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingType}
+        onOpenChange={(open) => { if (!open) setPendingType(null); }}
+        title="切换平台会清空已填写的凭据"
+        description="不同平台的凭据字段不同，继续将丢弃当前表单内容。渠道本身的绑定不受影响。"
+        dangerLevel="warning"
+        confirmLabel="继续切换"
+        cancelLabel="取消"
+        onConfirm={() => {
+          const next = pendingType;
+          setPendingType(null);
+          if (next) applyTypeChange(next);
+        }}
+      />
     </Page>
   );
 }

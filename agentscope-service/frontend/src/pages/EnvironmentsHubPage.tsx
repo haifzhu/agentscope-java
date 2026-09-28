@@ -16,7 +16,8 @@
 
 import { namespaceCan } from '../lib/namespaceScope';
 import { useControlPlaneScope } from '../app/ScopeContext';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, MonitorSmartphone, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   Environment,
@@ -39,8 +40,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import { Input, Textarea } from '../components/ui/input';
 import { Page, PageHeader } from '../components/Page';
+import { apiErrorMessage } from '../lib/apiError';
 
 const selectClass =
   'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm';
@@ -54,9 +57,8 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function EnvironmentsHubPage() {
   const canManage = namespaceCan(useControlPlaneScope().roles, 'configure');
+  const queryClient = useQueryClient();
   const [createdKey, setCreatedKey] = useState<string | null>(null);
-  const [items, setItems] = useState<Environment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Environment | null>(null);
@@ -65,28 +67,25 @@ export default function EnvironmentsHubPage() {
   const [editName, setEditName] = useState('');
   const [editConfigText, setEditConfigText] = useState('{}');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [hands, setHands] = useState<HandsStatus | null>(null);
+  const [pending, setPending] = useState<{ kind: 'archive' | 'delete'; env: Environment }>();
 
-  async function refresh() {
-    setLoading(true);
-    setErr(null);
-    try {
-      setItems(await listEnvironments());
-      try {
-        setHands(await fetchHandsStatus());
-      } catch {
-        setHands(null);
-      }
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }
+  // D 阶段 MEDIUM-2：列表与 Hands 状态迁到 Query，取代手写 refresh + useEffect。
+  const envQuery = useQuery({
+    queryKey: ['environments'],
+    queryFn: listEnvironments,
+    retry: false,
+  });
+  const handsQuery = useQuery({
+    queryKey: ['hands-status'],
+    queryFn: fetchHandsStatus,
+    retry: false,
+  });
+  const items = envQuery.data ?? [];
+  const hands: HandsStatus | null = handsQuery.data ?? null;
+  const loading = envQuery.isLoading;
+  const errorText = envQuery.error ? apiErrorMessage(envQuery.error, '加载失败') : err;
 
-  useEffect(() => {
-    void refresh();
-  }, []);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['environments'] });
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -104,7 +103,7 @@ export default function EnvironmentsHubPage() {
       setType('local');
       await refresh();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '创建失败');
+      setErr(apiErrorMessage(e, '创建失败'));
     } finally {
       setBusyId(null);
     }
@@ -134,33 +133,21 @@ export default function EnvironmentsHubPage() {
       setEditing(null);
       await refresh();
     } catch (ex: unknown) {
-      setErr(ex instanceof Error ? ex.message : '保存失败');
+      setErr(apiErrorMessage(ex, '保存失败'));
     } finally {
       setBusyId(null);
     }
   }
 
-  async function handleArchive(id: string) {
-    if (!confirm('确认归档该运行环境？')) return;
-    setBusyId(id);
+  async function runEnvAction(env: Environment, kind: 'archive' | 'delete') {
+    setBusyId(env.id);
+    setErr(null);
     try {
-      await archiveEnvironment(id);
+      if (kind === 'archive') await archiveEnvironment(env.id);
+      else await deleteEnvironment(env.id);
       await refresh();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '归档失败');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('确认永久删除该运行环境？此操作不可恢复。')) return;
-    setBusyId(id);
-    try {
-      await deleteEnvironment(id);
-      await refresh();
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '删除失败');
+      setErr(apiErrorMessage(e, kind === 'archive' ? '归档失败' : '删除失败'));
     } finally {
       setBusyId(null);
     }
@@ -180,9 +167,9 @@ export default function EnvironmentsHubPage() {
         }
       />
       <AsyncState
-        status={loading ? 'loading' : err ? 'error' : items.length ? 'ready' : 'empty'}
+        status={loading ? 'loading' : errorText ? 'error' : items.length ? 'ready' : 'empty'}
         resource="运行环境"
-        errorDescription={err ?? undefined}
+        errorDescription={errorText ?? undefined}
         onRetry={() => void refresh()}
         emptyDescription="尚未创建自定义环境。托管会话需要时会自动创建默认环境。"
       >
@@ -241,7 +228,7 @@ export default function EnvironmentsHubPage() {
                       variant="outline"
                       size="sm"
                       disabled={busyId === env.id}
-                      onClick={() => void handleArchive(env.id)}
+                      onClick={() => setPending({ kind: 'archive', env })}
                     >
                       <Archive className="h-3.5 w-3.5" /> 归档
                     </Button>
@@ -252,7 +239,7 @@ export default function EnvironmentsHubPage() {
                     size="sm"
                     className="text-danger-text"
                     disabled={busyId === env.id}
-                    onClick={() => void handleDelete(env.id)}
+                    onClick={() => setPending({ kind: 'delete', env })}
                   >
                     <Trash2 className="h-3.5 w-3.5" /> 删除
                   </Button>
@@ -385,6 +372,29 @@ export default function EnvironmentsHubPage() {
           </DialogBody>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(undefined); }}
+        title={pending?.kind === 'delete'
+          ? `永久删除运行环境「${pending.env.name}」？`
+          : pending?.kind === 'archive'
+            ? `归档运行环境「${pending.env.name}」？`
+            : ''}
+        description={pending?.kind === 'delete'
+          ? '该运行环境将被永久删除，此操作不可恢复。'
+          : '归档后新会话不再选用它，既有配置保留。'}
+        dangerLevel={pending?.kind === 'delete' ? 'danger' : 'warning'}
+        confirmLabel={pending?.kind === 'delete' ? '删除' : '归档'}
+        cancelLabel="取消"
+        busy={!!pending && busyId === pending.env.id}
+        onConfirm={() => {
+          if (!pending) return;
+          const target = pending;
+          setPending(undefined);
+          void runEnvAction(target.env, target.kind);
+        }}
+      />
+
     </Page>
   );
 }

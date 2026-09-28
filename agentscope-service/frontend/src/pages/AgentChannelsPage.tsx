@@ -45,6 +45,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const selectClass =
   'h-10 w-full rounded-lg border border-border bg-surface px-3 text-sm disabled:opacity-60';
@@ -56,6 +58,7 @@ export default function AgentChannelsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [edit, setEdit] = useState<AgentPresence | null>(null);
+  const [pending, setPending] = useState<AgentPresence | null>(null);
 
   async function load() {
     setErr(null);
@@ -116,15 +119,7 @@ export default function AgentChannelsPage() {
                   size="sm"
                   variant="outline"
                   className="text-danger-text"
-                  onClick={async () => {
-                    if (!confirm(`确认断开 ${p.channelId}？`)) return;
-                    try {
-                      await deleteAgentPresence(agentId, p.channelId);
-                      await load();
-                    } catch (e: unknown) {
-                      setErr(e instanceof Error ? e.message : String(e));
-                    }
-                  }}
+                  onClick={() => setPending(p)}
                 >
                   <Trash2 className="h-3.5 w-3.5" /> 断开
                 </Button>
@@ -159,6 +154,27 @@ export default function AgentChannelsPage() {
         <p className="text-sm text-text-3">查看把指定联系人、群组或事件路由到该逻辑智能体的规则。</p>
         <ChannelBindingTable agentId={agentId} />
       </div>
+
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        title={pending ? `断开 ${pending.channelId}？` : ''}
+        description="断开后该渠道不再把消息路由到本智能体。渠道本身与其它智能体的绑定不受影响。"
+        dangerLevel="warning"
+        confirmLabel="断开"
+        cancelLabel="取消"
+        onConfirm={async () => {
+          const target = pending;
+          setPending(null);
+          if (!target) return;
+          try {
+            await deleteAgentPresence(agentId, target.channelId);
+            await load();
+          } catch (e: unknown) {
+            setErr(apiErrorMessage(e, '断开渠道失败'));
+          }
+        }}
+      />
     </div>
   );
 }

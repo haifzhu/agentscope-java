@@ -48,6 +48,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Page, PageHeader } from '@/components/Page';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { apiErrorMessage } from '@/lib/apiError';
 
 const DM_SCOPES = ['PER_PEER', 'MAIN'];
 
@@ -62,6 +64,7 @@ export default function ChannelsHubPage() {
   const [types, setTypes] = useState<ChannelTypeSpec[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState<ChannelInfo | null>(null);
   const [creating, setCreating] = useState(false);
 
   async function refresh() {
@@ -92,13 +95,12 @@ export default function ChannelsHubPage() {
     }
   }
 
-  async function handleDelete(c: ChannelInfo) {
-    if (!confirm(`确认删除渠道「${c.channelId}」？其条目与全部绑定都会被移除。`)) return;
+  async function runDelete(c: ChannelInfo) {
     try {
       await deleteChannel(c.channelId);
       await refresh();
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(apiErrorMessage(e, '删除渠道失败'));
     }
   }
 
@@ -156,7 +158,7 @@ export default function ChannelsHubPage() {
                   <Button size="sm" variant="outline" onClick={() => void toggleDisabled(c)}>
                     {c.disabled ? '启用' : '停用'}
                   </Button>
-                  <Button size="sm" variant="outline" className="text-danger-text" onClick={() => void handleDelete(c)}>
+                  <Button size="sm" variant="outline" className="text-danger-text" onClick={() => setPending(c)}>
                     <Trash2 className="h-3.5 w-3.5" /> 删除
                   </Button>
                 </div>
@@ -177,6 +179,21 @@ export default function ChannelsHubPage() {
           }}
         />
       )}
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        title={pending ? `删除渠道「${pending.channelId}」？` : ''}
+        description="该渠道的条目与全部绑定都会被移除，此操作不可恢复。"
+        dangerLevel="danger"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        onConfirm={() => {
+          const target = pending;
+          setPending(null);
+          if (target) void runDelete(target);
+        }}
+      />
+
     </Page>
   );
 }
